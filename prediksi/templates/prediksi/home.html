@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>WebGIS Peramalan Gempa</title>
+
+    <!-- Leaflet CSS dari CDN -->
+<link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+/>
+
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+        }
+        header {
+            padding: 10px 20px;
+            background-color: #1f2937;
+            color: white;
+        }
+        /* INI PENTING: tinggi map */
+        #map {
+            height: 80vh;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+<header>
+    <h2>WebGIS Peramalan Gempa (Random Forest, SVM, Poisson)</h2>
+</header>
+
+<!-- INI PENTING: container untuk Leaflet -->
+<div id="map"></div>
+
+<!-- Leaflet JS dari CDN -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+
+<script>
+    // Inisialisasi peta, fokus ke Indonesia
+    const map = L.map('map').setView([-2.5, 118], 5);
+
+    // Tile dasar OpenStreetMap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Ambil GeoJSON dari endpoint Django
+    fetch('/api/prediksi/')
+        .then(response => response.json())
+        .then(data => {
+            L.geoJSON(data, {
+                style: function (feature) {
+                    const p = feature.properties.rf_prob; // pakai RF untuk warna
+                    let color = '#ffffb2';
+                    if (p > 0.7) color = '#bd0026';
+                    else if (p > 0.5) color = '#f03b20';
+                    else if (p > 0.3) color = '#fd8d3c';
+                    else if (p > 0.1) color = '#fecc5c';
+
+                    return {
+                        color: '#555',
+                        weight: 1,
+                        fillColor: color,
+                        fillOpacity: 0.7
+                    };
+                },
+                onEachFeature: function (feature, layer) {
+                    const props = feature.properties;
+                    layer.bindPopup(
+                        `<b>Grid:</b> ${props.grid_id}<br>
+                         RF: ${props.rf_prob.toFixed(2)}<br>
+                         SVM: ${props.svm_prob.toFixed(2)}<br>
+                         Poisson: ${props.poisson_prob.toFixed(2)}`
+                    );
+                }
+            }).addTo(map);
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Gagal memuat data prediksi dari /api/prediksi/.');
+        });
+</script>
+</body>
+</html>
