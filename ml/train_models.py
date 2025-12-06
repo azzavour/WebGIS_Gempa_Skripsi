@@ -1,75 +1,152 @@
 import pandas as pd
+from pathlib import Path
+from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
 from sklearn.linear_model import PoissonRegressor
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import brier_score_loss
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+from sklearn.metrics import (
+    accuracy_score,
+    f1_score,
+    brier_score_loss,
+    mean_squared_error,
+)
 import joblib
-from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+DATA_PATH = BASE_DIR / "data" / "processed" / "training_dataset.csv"
+MODELS_DIR = BASE_DIR / "ml_models"
+RESULTS_PATH = BASE_DIR / "data" / "processed" / "model_scores.csv"
+
 
 def load_data():
-    """
-    Ganti fungsi ini dengan baca dataset BMKG-mu.
-    Contoh di sini: kita buat data dummy.
-    """
-    data = {
-        'magnitude_mean': [4.5, 5.2, 4.8, 6.0, 5.5, 4.0, 4.3, 5.8],
-        'depth_mean': [10, 20, 15, 30, 25, 5, 12, 40],
-        'frequency_week': [1, 3, 2, 4, 3, 0, 1, 5],
-        # label: 1 = terjadi gempa signifikan minggu depan, 0 = tidak
-        'next_week_event': [0, 1, 0, 1, 1, 0, 0, 1]
+    print("Baca data training dari:", DATA_PATH)
+    df = pd.read_csv(DATA_PATH)
+
+    # fitur yang dipakai
+    feature_cols = ["event_count", "mean_mag", "max_mag", "mean_depth", "event_occur"]
+
+    # buang baris yang ada NaN di fitur atau target
+    df = df.dropna(subset=feature_cols + ["event_count_next"])
+
+    # pastikan tipe numerik
+    for col in feature_cols + ["event_count_next"]:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+    df = df.dropna(subset=feature_cols + ["event_count_next"])
+
+    # X = fitur
+    X = df[feature_cols].astype(float)
+
+    # y_bin = target biner (ada gempa tahun depan atau tidak)
+    df["event_next_binary"] = (df["event_count_next"] > 0).astype(int)
+    y_bin = df["event_next_binary"]
+
+    # y_count = target jumlah kejadian (buat model Poisson)
+    y_count = df["event_count_next"].astype(float)
+
+    print("Unique label y_bin:", sorted(y_bin.unique()))
+    return X, y_bin, y_count
+
+
+def train_random_forest(X_train, y_train):
+    rf = RandomForestClassifier(
+        n_estimators=200,
+        random_state=42,
+        n_jobs=-1,
+    )
+    rf.fit(X_train, y_train)
+    return rf
+
+
+def train_svm(X_train, y_train):
+    # SVM perlu scaling → pakai pipeline
+    svm_clf = Pipeline(
+        steps=[
+            ("scaler", StandardScaler()),
+            ("svm", SVC(kernel="rbf", probability=True, random_state=42)),
+        ]
+    )
+    svm_clf.fit(X_train, y_train)
+    return svm_clf
+
+
+def train_poisson(X_train, y_train_count):
+    pr = PoissonRegressor(alpha=1.0, max_iter=1000)
+    pr.fit(X_train, y_train_count)
+    return pr
+
+
+def evaluate_classifier(model, X_test, y_test, name):
+    prob = model.predict_proba(X_test)[:, 1]
+    pred = (prob >= 0.5).astype(int)
+
+    acc = accuracy_score(y_test, pred)
+    f1 = f1_score(y_test, pred)
+    brier = brier_score_loss(y_test, prob)
+
+    print(f"\n=== {name} ===")
+    print("Accuracy :", acc)
+    print("F1-score :", f1)
+    print("Brier    :", brier)
+
+    return {
+        "model": name,
+        "accuracy": acc,
+        "f1_score": f1,
+        "brier_score": brier,
     }
-    df = pd.DataFrame(data)
-    return df
+
+
+def evaluate_poisson(model, X_test, y_true):
+    y_pred = model.predict(X_test)
+    mse = mean_squared_error(y_true, y_pred)
+
+    print("\n=== Poisson Regressor ===")
+    print("MSE (count) :", mse)
+
+    return {
+        "model": "Poisson",
+        "mse_count": mse,
+    }
 
 
 def main():
-    df = load_data()
-    X = df[['magnitude_mean', 'depth_mean', 'frequency_week']]
-    y = df['next_week_event']
+    X, y_bin, y_count = load_data()
 
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.25, random_state=42
+    # split train/test 80/20
+    X_train, X_test, y_train_bin, y_test_bin, y_train_count, y_test_count = train_test_split(
+        X, y_bin, y_count, test_size=0.2, random_state=42, stratify=y_bin
     )
 
-    # Random Forest
-    rf = RandomForestClassifier(
-        n_estimators=200,
-        random_state=42
-    )
-    rf.fit(X_train, y_train)
-    rf_prob = rf.predict_proba(X_test)[:, 1]
-    print("RF Brier:", brier_score_loss(y_test, rf_prob))
+    # 1. Random Forest
+    rf_model = train_random_forest(X_train, y_train_bin)
 
-    # SVM dengan probabilitas
-    svm = SVC(
-        kernel='rbf',
-        probability=True,
-        random_state=42
-    )
-    svm.fit(X_train, y_train)
-    svm_prob = svm.predict_proba(X_test)[:, 1]
-    print("SVM Brier:", brier_score_loss(y_test, svm_prob))
+    # 2. SVM
+    svm_model = train_svm(X_train, y_train_bin)
 
-    # Poisson sebagai baseline (di sini kita pakai target count,
-    # tapi untuk demo kita pakai label sama y; di kasus aslimu bisa beda)
-    poisson = PoissonRegressor(alpha=1.0, max_iter=1000)
-    poisson.fit(X_train, y_train)
-    pois_pred = poisson.predict(X_test)
-    print("Poisson pred sample:", pois_pred[:5])
+    # 3. Poisson
+    poisson_model = train_poisson(X_train, y_train_count)
 
-    # Simpan model ke folder 'ml_models'
-    models_dir = BASE_DIR / 'ml_models'
-    models_dir.mkdir(exist_ok=True)
+    # evaluasi
+    scores = []
+    scores.append(evaluate_classifier(rf_model, X_test, y_test_bin, "RandomForest"))
+    scores.append(evaluate_classifier(svm_model, X_test, y_test_bin, "SVM"))
+    scores.append(evaluate_poisson(poisson_model, X_test, y_test_count))
 
-    joblib.dump(rf, models_dir / 'rf_model.pkl')
-    joblib.dump(svm, models_dir / 'svm_model.pkl')
-    joblib.dump(poisson, models_dir / 'poisson_model.pkl')
-    print("Model disimpan di:", models_dir)
+    # simpan model
+    MODELS_DIR.mkdir(parents=True, exist_ok=True)
+    joblib.dump(rf_model, MODELS_DIR / "rf_model.pkl")
+    joblib.dump(svm_model, MODELS_DIR / "svm_model.pkl")
+    joblib.dump(poisson_model, MODELS_DIR / "poisson_model.pkl")
+    print("\nModel disimpan di folder:", MODELS_DIR)
+
+    # simpan skor ke CSV
+    df_scores = pd.DataFrame(scores)
+    df_scores.to_csv(RESULTS_PATH, index=False)
+    print("Skor model disimpan di:", RESULTS_PATH)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

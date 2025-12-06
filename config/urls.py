@@ -6,4 +6,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', home, name='home'),
     path('api/prediksi/', prediksi_geojson, name='prediksi_geojson'),
+      path("", include("prediksi.urls")),
 ]
