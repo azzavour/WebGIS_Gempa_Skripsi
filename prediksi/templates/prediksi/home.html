@@ -1,90 +1,539 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>WebGIS Peramalan Gempa</title>
-
-    <!-- Leaflet CSS dari CDN -->
-<link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-/>
-
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dasbor Prediksi Gempa Bumi Interaktif</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v9.2.4/ol.css">
     <style>
+        :root {
+            color-scheme: light;
+            font-family: "Segoe UI", "Inter", system-ui, -apple-system, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Arial, sans-serif;
+            margin: 0;
+            background: #eef2f7;
+            color: #0f172a;
+            font-family: inherit;
+        }
+
+        .page-shell {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 32px 20px 56px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .hero {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .hero h1 {
+            margin: 0;
+            font-size: clamp(1.8rem, 4vw, 2.4rem);
+            font-weight: 700;
+        }
+
+        .hero-subtitle {
+            margin: 0;
+            font-size: 0.95rem;
+            color: #4b6580;
+        }
+
+        .info-banner {
+            background: linear-gradient(120deg, #0f2d5c, #123873);
+            color: #e2e8f0;
+            border-radius: 18px;
+            padding: 20px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 24px;
+            flex-wrap: wrap;
+            box-shadow: 0 20px 35px rgba(15, 38, 84, 0.25);
+        }
+
+        .banner-left {
+            flex: 1;
+            min-width: 240px;
+        }
+
+        .banner-left p {
+            margin: 0;
+            font-size: 1rem;
+        }
+
+        .banner-right {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-width: 240px;
+            align-items: flex-start;
+        }
+
+        .banner-right label {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #c8d4f0;
+        }
+
+        #model-select {
+            width: 220px;
+            padding: 10px 14px;
+            border-radius: 999px;
+            border: none;
+            font-size: 0.95rem;
+            background: rgba(255, 255, 255, 0.95);
+            color: #0f172a;
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.15);
+        }
+
+        .banner-updated {
+            font-size: 0.85rem;
+            color: #c8d4f0;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+            gap: 24px;
+            align-items: flex-start;
+        }
+
+        .card {
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 25px 45px rgba(15, 23, 42, 0.08);
+            border: 1px solid #edf1f7;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .card-header h2,
+        .card-header h3 {
+            margin: 0;
+            font-size: 1.2rem;
+        }
+
+        .model-pill {
+            padding: 6px 12px;
+            border-radius: 999px;
+            background: #eef2ff;
+            color: #1d4ed8;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .latest-card {
+            gap: 16px;
+        }
+
+        .latest-body {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .prob-badge {
+            width: 110px;
+            height: 110px;
+            border-radius: 20px;
+            background: radial-gradient(circle at 30% 30%, #f97316, #b91c1c);
+            color: #fff;
+            font-size: 2.6rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 6px 24px rgba(255, 255, 255, 0.25);
+        }
+
+        .latest-info {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .latest-grid {
+            font-size: 1.1rem;
+            font-weight: 600;
             margin: 0;
         }
-        header {
-            padding: 10px 20px;
-            background-color: #1f2937;
-            color: white;
+
+        .latest-years {
+            display: flex;
+            flex-direction: column;
+            color: #475569;
+            font-size: 0.95rem;
         }
-        /* INI PENTING: tinggi map */
-        #map {
-            height: 80vh;
+
+        .map-card #map {
             width: 100%;
+            height: 440px;
+            border-radius: 18px;
+            border: 1px solid #dbe0e8;
+            overflow: hidden;
+        }
+
+        .map-legend {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.9rem;
+            color: #475569;
+        }
+
+        .legend-gradient {
+            flex: 1;
+            height: 10px;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #ffefba, #ffc857, #f97316, #dc2626, #7f1d1d);
+            border: 1px solid #dbe0e8;
+        }
+
+        .risk-card {
+            max-height: 640px;
+        }
+
+        .risk-scroll {
+            max-height: 540px;
+            overflow-y: auto;
+            padding-right: 6px;
+        }
+
+        .risk-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .risk-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            border-radius: 14px;
+            border: 1px solid #edf1f7;
+            background: #f8fafc;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+        }
+
+        .risk-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .risk-title {
+            font-weight: 600;
+        }
+
+        .risk-meta {
+            font-size: 0.85rem;
+            color: #475569;
+        }
+
+        .risk-badge {
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-weight: 600;
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .risk-placeholder {
+            text-align: center;
+            padding: 18px;
+            border-radius: 12px;
+            background: #f8fafc;
+            border: 1px dashed #cbd5f5;
+            color: #475569;
+        }
+
+        @media (max-width: 960px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+
+            .info-banner {
+                flex-direction: column;
+            }
+
+            #model-select {
+                width: 100%;
+            }
         }
     </style>
 </head>
 <body>
-<header>
-    <h2>WebGIS Peramalan Gempa (Random Forest, SVM, Poisson)</h2>
-</header>
+    <div class="page-shell">
+        <header class="hero">
+            <h1>Dasbor Prediksi Gempa Bumi Interaktif</h1>
+            <p class="hero-subtitle">Prediksi probabilitas gempa bumi berbasis model machine learning grid tahunan.</p>
+        </header>
 
-<!-- INI PENTING: container untuk Leaflet -->
-<div id="map"></div>
+        <section class="info-banner">
+            <div class="banner-left">
+                <p id="banner-summary">Prediksi probabilitas >= 1 gempa pada tahun target berdasarkan model terpilih.</p>
+            </div>
+            <div class="banner-right">
+                <span class="banner-updated" id="banner-updated">Terakhir diperbarui: -</span>
+                <label for="model-select">Pilih Model Prediksi</label>
+                <select id="model-select">
+                    <option value="rf">Random Forest</option>
+                    <option value="svm">SVM</option>
+                    <option value="poisson">Poisson</option>
+                </select>
+            </div>
+        </section>
 
-<!-- Leaflet JS dari CDN -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+        <main class="dashboard">
+            <section class="main-column">
+                <div class="card latest-card">
+                    <div class="card-header">
+                        <h2>Prediksi Terbaru</h2>
+                        <span class="model-pill" id="latest-model-label">-</span>
+                    </div>
+                    <div class="latest-body">
+                        <div class="prob-badge" id="latest-prob">0.00</div>
+                        <div class="latest-info">
+                            <p class="latest-grid" id="latest-grid">Menunggu data grid...</p>
+                            <div class="latest-years">
+                                <span id="latest-feature-year">Tahun fitur: -</span>
+                                <span id="latest-target-year">Tahun prediksi: -</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
+                <div class="card map-card">
+                    <div class="card-header">
+                        <div>
+                            <h2>Peta Sebaran Prediksi</h2>
+                            <p id="map-meta">Menunggu data prediksi...</p>
+                        </div>
+                        <span class="model-pill" id="map-model-label">-</span>
+                    </div>
+                    <div id="map"></div>
+                    <div class="map-legend">
+                        <span>Probabilitas rendah</span>
+                        <span class="legend-gradient"></span>
+                        <span>Probabilitas tinggi</span>
+                    </div>
+                </div>
+            </section>
 
-<script>
-    // Inisialisasi peta, fokus ke Indonesia
-    const map = L.map('map').setView([-2.5, 118], 5);
+            <aside class="side-column">
+                <div class="card risk-card">
+                    <div class="card-header">
+                        <h3>Area Risiko Tertinggi</h3>
+                        <span class="model-pill" id="risk-model-label">-</span>
+                    </div>
+                    <div class="risk-scroll">
+                        <ul id="risk-list" class="risk-list">
+                            <li class="risk-placeholder">Memuat data...</li>
+                        </ul>
+                    </div>
+                </div>
+            </aside>
+        </main>
+    </div>
 
-    // Tile dasar OpenStreetMap
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 18,
-        attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
+    <script src="https://cdn.jsdelivr.net/npm/ol@v9.2.4/dist/ol.js"></script>
+    <script>
+        const MODEL_FIELDS = {
+            rf: { label: "Random Forest", field: "rf_prob" },
+            svm: { label: "SVM", field: "svm_prob" },
+            poisson: { label: "Poisson", field: "poisson_prob" },
+        };
 
-    // Ambil GeoJSON dari endpoint Django
-    fetch('/api/prediksi/')
-        .then(response => response.json())
-        .then(data => {
-            L.geoJSON(data, {
-                style: function (feature) {
-                    const p = feature.properties.rf_prob; // pakai RF untuk warna
-                    let color = '#ffffb2';
-                    if (p > 0.7) color = '#bd0026';
-                    else if (p > 0.5) color = '#f03b20';
-                    else if (p > 0.3) color = '#fd8d3c';
-                    else if (p > 0.1) color = '#fecc5c';
+        const select = document.getElementById("model-select");
+        const bannerSummary = document.getElementById("banner-summary");
+        const bannerUpdated = document.getElementById("banner-updated");
+        const latestModelLabel = document.getElementById("latest-model-label");
+        const riskModelLabel = document.getElementById("risk-model-label");
+        const mapModelLabel = document.getElementById("map-model-label");
+        const mapMeta = document.getElementById("map-meta");
+        const riskList = document.getElementById("risk-list");
 
-                    return {
-                        color: '#555',
-                        weight: 1,
-                        fillColor: color,
-                        fillOpacity: 0.7
-                    };
-                },
-                onEachFeature: function (feature, layer) {
-                    const props = feature.properties;
-                    layer.bindPopup(
-                        `<b>Grid:</b> ${props.grid_id}<br>
-                         RF: ${props.rf_prob.toFixed(2)}<br>
-                         SVM: ${props.svm_prob.toFixed(2)}<br>
-                         Poisson: ${props.poisson_prob.toFixed(2)}`
-                    );
-                }
-            }).addTo(map);
-        })
-        .catch(err => {
-            console.error(err);
-            alert('Gagal memuat data prediksi dari /api/prediksi/.');
+        const latestCardEls = {
+            prob: document.getElementById("latest-prob"),
+            grid: document.getElementById("latest-grid"),
+            featureYear: document.getElementById("latest-feature-year"),
+            targetYear: document.getElementById("latest-target-year"),
+        };
+
+        const baseLayer = new ol.layer.Tile({
+            source: new ol.source.OSM(),
         });
-</script>
+
+        const heatSource = new ol.source.Vector();
+
+        const heatLayer = new ol.layer.Heatmap({
+            source: heatSource,
+            blur: 22,
+            radius: 14,
+            weight: (feature) => {
+                const key = `${select.value}_prob`;
+                const value = feature.get(key);
+                if (value == null) {
+                    return 0;
+                }
+                return Math.max(0, Math.min(1, Number(value)));
+            },
+        });
+
+        const map = new ol.Map({
+            target: "map",
+            layers: [baseLayer, heatLayer],
+            view: new ol.View({
+                center: ol.proj.fromLonLat([118, -2.5]),
+                zoom: 5,
+            }),
+        });
+
+        const formatProb = (value) => Number(value || 0).toFixed(2);
+
+        function setUpdatedNow() {
+            if (!bannerUpdated) return;
+            const now = new Date();
+            const hh = String(now.getHours()).padStart(2, "0");
+            const mm = String(now.getMinutes()).padStart(2, "0");
+            const ss = String(now.getSeconds()).padStart(2, "0");
+            bannerUpdated.textContent = `Terakhir diperbarui: ${hh}:${mm}:${ss}`;
+        }
+
+        function updateBanner(best, modelKey) {
+            const label = MODEL_FIELDS[modelKey].label;
+            const targetYear = best?.target_year ?? "-";
+            bannerSummary.textContent = `Prediksi probabilitas >= 1 gempa pada tahun ${targetYear} berdasarkan model ${label}.`;
+        }
+
+        function updateMapSummary(features, modelKey) {
+            const label = MODEL_FIELDS[modelKey].label;
+            mapModelLabel.textContent = label;
+            if (!features || !features.length) {
+                mapMeta.textContent = "Data prediksi tidak tersedia.";
+                return;
+            }
+            const first = features[0].properties || {};
+            mapMeta.textContent = `Tahun fitur ${first.year ?? "-"} | Tahun prediksi ${first.target_year ?? "-"} | Total grid ${features.length}`;
+        }
+
+        function renderTopList(items, modelKey) {
+            const label = MODEL_FIELDS[modelKey].label;
+            riskModelLabel.textContent = label;
+            if (!riskList) {
+                return;
+            }
+            if (!items || items.length === 0) {
+                riskList.innerHTML = '<li class="risk-placeholder">Data tidak tersedia.</li>';
+                return;
+            }
+            const field = `${modelKey}_prob`;
+            riskList.innerHTML = "";
+            items.forEach((props) => {
+                if (!props) return;
+                const li = document.createElement("li");
+                li.className = "risk-item";
+                li.innerHTML = `
+                    <div class="risk-info">
+                        <span class="risk-title">Grid ${props.grid_id}</span>
+                        <span class="risk-meta">${props.year} -> ${props.target_year}</span>
+                    </div>
+                    <span class="risk-badge">${formatProb(props[field])}</span>
+                `;
+                riskList.appendChild(li);
+            });
+        }
+
+        function updateLatestCard(best, modelKey) {
+            const label = MODEL_FIELDS[modelKey].label;
+            latestModelLabel.textContent = label;
+            if (!best) {
+                latestCardEls.prob.textContent = "0.00";
+                latestCardEls.grid.textContent = "Data tidak tersedia";
+                latestCardEls.featureYear.textContent = "Tahun fitur: -";
+                latestCardEls.targetYear.textContent = "Tahun prediksi: -";
+                return;
+            }
+            const field = `${modelKey}_prob`;
+            latestCardEls.prob.textContent = formatProb(best[field]);
+            latestCardEls.grid.textContent = `Grid ${best.grid_id}`;
+            latestCardEls.featureYear.textContent = `Tahun fitur: ${best.year ?? "-"}`;
+            latestCardEls.targetYear.textContent = `Tahun prediksi: ${best.target_year ?? "-"}`;
+        }
+
+        async function loadHeat() {
+            const modelKey = select.value;
+            mapMeta.textContent = "Memuat data peta...";
+            riskList.innerHTML = '<li class="risk-placeholder">Memuat data...</li>';
+            try {
+                const res = await fetch(`/api/prediksi/points/?model=${modelKey}`);
+                if (!res.ok) {
+                    throw new Error(`Gagal memuat data (${res.status})`);
+                }
+                const geo = await res.json();
+
+                const format = new ol.format.GeoJSON();
+                const feats = format.readFeatures(geo, {
+                    featureProjection: "EPSG:3857",
+                    dataProjection: "EPSG:4326",
+                });
+
+                heatSource.clear();
+                heatSource.addFeatures(feats);
+
+                updateMapSummary(geo.features, modelKey);
+                const enriched = (geo.features || []).map((f) => f?.properties || {});
+                enriched.sort((a, b) => (b?.[`${modelKey}_prob`] || 0) - (a?.[`${modelKey}_prob`] || 0));
+                const top = enriched.slice(0, 12);
+
+                renderTopList(top, modelKey);
+                updateLatestCard(top[0], modelKey);
+                updateBanner(top[0], modelKey);
+                setUpdatedNow();
+            } catch (error) {
+                console.error(error);
+                heatSource.clear();
+                mapMeta.textContent = "Tidak dapat memuat data.";
+                riskList.innerHTML = '<li class="risk-placeholder">Gagal memuat data.</li>';
+                updateLatestCard(null, select.value);
+                updateBanner(null, select.value);
+                alert("Gagal memuat data prediksi. Periksa server Django Anda.");
+            }
+        }
+
+        select.addEventListener("change", () => {
+            loadHeat();
+        });
+
+        loadHeat();
+    </script>
 </body>
 </html>

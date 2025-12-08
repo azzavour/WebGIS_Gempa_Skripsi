@@ -43,8 +43,6 @@ def main():
 
     print("Jumlah baris grid-year yang ada gempanya:", len(grouped))
 
-    # ==== BAGIAN PENTING: tambahkan grid-year yang TIDAK ada gempa ====
-
     # daftar semua grid yang pernah ada gempa
     grids = grouped[["grid_id", "grid_lat", "grid_lon"]].drop_duplicates()
 
