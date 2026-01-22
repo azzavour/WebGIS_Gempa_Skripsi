@@ -32,84 +32,92 @@
             gap: 24px;
         }
 
-        .hero {
-            text-align: center;
+        .page-header {
             display: flex;
-            flex-direction: column;
-            gap: 8px;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 16px;
+            flex-wrap: wrap;
         }
 
-        .hero h1 {
+        .header-left {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .header-title {
             margin: 0;
-            font-size: clamp(1.8rem, 4vw, 2.4rem);
+            font-size: clamp(1.6rem, 4vw, 2.2rem);
             font-weight: 700;
         }
 
-        .hero-subtitle {
-            margin: 0;
-            font-size: 0.95rem;
-            color: #4b6580;
-        }
-
-        .info-banner {
-            background: linear-gradient(120deg, #0f2d5c, #123873);
-            color: #e2e8f0;
-            border-radius: 18px;
-            padding: 20px 24px;
+        .header-meta {
             display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 24px;
+            gap: 10px;
             flex-wrap: wrap;
-            box-shadow: 0 20px 35px rgba(15, 38, 84, 0.25);
+            font-size: 0.95rem;
+            color: #475569;
         }
 
-        .banner-left {
-            flex: 1;
-            min-width: 240px;
+        .header-meta .meta-divider {
+            color: #94a3b8;
         }
 
-        .banner-left p {
-            margin: 0;
-            font-size: 1rem;
+        .map-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 18px;
+            align-items: flex-end;
         }
 
-        .banner-right {
+        .map-controls {
             display: flex;
             flex-direction: column;
-            gap: 8px;
-            min-width: 240px;
-            align-items: flex-start;
+            gap: 6px;
+            min-width: 200px;
         }
 
-        .banner-right label {
-            font-size: 0.85rem;
+        .map-controls label,
+        .map-controls .controls-label {
+            font-size: 0.78rem;
             text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #c8d4f0;
+            letter-spacing: 0.6px;
+            color: #475569;
         }
 
         #model-select {
-            width: 220px;
             padding: 10px 14px;
-            border-radius: 999px;
-            border: none;
+            border-radius: 12px;
+            border: 1px solid #cbd5f5;
             font-size: 0.95rem;
-            background: rgba(255, 255, 255, 0.95);
+            background: #fff;
             color: #0f172a;
-            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.15);
+            min-width: 220px;
+            box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
         }
 
-        .banner-updated {
+        .slider-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        #risk-threshold {
+            width: 170px;
+        }
+
+        #risk-threshold-value {
             font-size: 0.85rem;
-            color: #c8d4f0;
+            color: #1d4ed8;
+            font-weight: 600;
         }
 
         .dashboard {
             display: grid;
-            grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+            grid-template-columns: minmax(0, 72%) minmax(280px, 28%);
             gap: 24px;
-            align-items: flex-start;
+            align-items: stretch;
         }
 
         .card {
@@ -145,134 +153,214 @@
             font-weight: 600;
         }
 
-        .latest-card {
-            gap: 16px;
-        }
-
-        .latest-body {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            flex-wrap: wrap;
-        }
-
-        .prob-badge {
-            width: 110px;
-            height: 110px;
-            border-radius: 20px;
-            background: radial-gradient(circle at 30% 30%, #f97316, #b91c1c);
-            color: #fff;
-            font-size: 2.6rem;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: inset 0 6px 24px rgba(255, 255, 255, 0.25);
-        }
-
-        .latest-info {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .latest-grid {
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin: 0;
-        }
-
-        .latest-years {
-            display: flex;
-            flex-direction: column;
-            color: #475569;
-            font-size: 0.95rem;
-        }
-
         .map-card #map {
             width: 100%;
-            height: 440px;
+            min-height: 75vh;
+            height: 75vh;
             border-radius: 18px;
             border: 1px solid #dbe0e8;
             overflow: hidden;
+            position: relative;
+        }
+
+        .mode-toggle {
+            display: inline-flex;
+            border-radius: 12px;
+            border: 1px solid #d0d7e4;
+            background: #f8fafc;
+            padding: 4px;
+            gap: 4px;
+        }
+
+        .mode-button {
+            border: none;
+            background: transparent;
+            color: #475569;
+            padding: 6px 12px;
+            border-radius: 9px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .mode-button.active {
+            background: #1d4ed8;
+            color: #fff;
+            box-shadow: 0 6px 14px rgba(29, 78, 216, 0.25);
         }
 
         .map-legend {
             display: flex;
-            align-items: center;
-            gap: 12px;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            gap: 16px;
             font-size: 0.9rem;
             color: #475569;
         }
 
-        .legend-gradient {
-            flex: 1;
-            height: 10px;
-            border-radius: 999px;
-            background: linear-gradient(90deg, #ffefba, #ffc857, #f97316, #dc2626, #7f1d1d);
-            border: 1px solid #dbe0e8;
-        }
-
-        .risk-card {
-            max-height: 640px;
-        }
-
-        .risk-scroll {
-            max-height: 540px;
-            overflow-y: auto;
-            padding-right: 6px;
-        }
-
-        .risk-list {
-            list-style: none;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .risk-item {
+        .map-summary {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 12px 16px;
-            border-radius: 14px;
-            border: 1px solid #edf1f7;
-            background: #f8fafc;
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 16px;
         }
 
-        .risk-info {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-
-        .risk-title {
+        .map-meta-text {
+            margin: 0;
             font-weight: 600;
+            color: #0f172a;
         }
 
-        .risk-meta {
+        #point-count-label {
             font-size: 0.85rem;
             color: #475569;
         }
 
-        .risk-badge {
-            padding: 6px 12px;
-            border-radius: 999px;
-            font-weight: 600;
-            background: #fee2e2;
-            color: #b91c1c;
+        .legend-note {
+            margin: 4px 0 0;
+            font-size: 0.8rem;
+            color: #64748b;
         }
 
-        .risk-placeholder {
-            text-align: center;
-            padding: 18px;
+        .legend-categories {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            flex: 1 1 220px;
+        }
+
+        .legend-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 999px;
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
+            font-size: 0.82rem;
+            color: #0f172a;
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .legend-gradient-block {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1 1 220px;
+        }
+
+        .legend-gradient {
+            flex: 1;
+            height: 12px;
+            border-radius: 999px;
+            border: 1px solid #dbe0e8;
+        }
+
+        .map-tooltip {
+            position: absolute;
+            pointer-events: none;
+            background: rgba(15, 23, 42, 0.9);
+            color: #fff;
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            box-shadow: 0 8px 16px rgba(15, 23, 42, 0.3);
+            transform: translate(-50%, -120%);
+            transition: opacity 0.15s ease;
+            opacity: 0;
+        }
+
+        .map-tooltip.visible {
+            opacity: 1;
+        }
+
+        .impact-card {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .impact-body {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .impact-region {
+            margin: 0;
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: #0f172a;
+        }
+
+        .impact-subtitle {
+            margin: 0;
+            font-size: 0.85rem;
+            color: #64748b;
+        }
+
+        .impact-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+        }
+
+        .impact-metric {
+            border: 1px dashed #e2e8f0;
             border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            background: #f8fafc;
+        }
+
+        .impact-metric span:first-child {
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #64748b;
+        }
+
+        .impact-metric strong {
+            font-size: 1.1rem;
+            color: #0f172a;
+        }
+
+        .impact-metric small {
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+
+        .impact-bullets {
+            margin: 0;
+            padding-left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            color: #475569;
+            font-size: 0.9rem;
+        }
+
+        .impact-bullets li::marker {
+            color: #1d4ed8;
+        }
+
+        .impact-placeholder {
+            padding: 18px;
+            border-radius: 14px;
             background: #f8fafc;
             border: 1px dashed #cbd5f5;
             color: #475569;
+            text-align: center;
         }
 
         @media (max-width: 960px) {
@@ -280,84 +368,91 @@
                 grid-template-columns: 1fr;
             }
 
-            .info-banner {
-                flex-direction: column;
-            }
-
             #model-select {
                 width: 100%;
+            }
+
+            .map-card #map {
+                min-height: 60vh;
+                height: 60vh;
             }
         }
     </style>
 </head>
 <body>
     <div class="page-shell">
-        <header class="hero">
-            <h1>Dasbor Prediksi Gempa Bumi Interaktif</h1>
-            <p class="hero-subtitle">Prediksi probabilitas gempa bumi berbasis model machine learning grid tahunan.</p>
+        <header class="page-header">
+            <div class="header-left">
+                <h1 class="header-title">Peta Prediksi Risiko Gempa</h1>
+                <div class="header-meta">
+                    <span id="header-target-year">Tahun prediksi: -</span>
+                    <span class="meta-divider">•</span>
+                    <span id="header-updated">Update: -</span>
+                </div>
+            </div>
         </header>
-
-        <section class="info-banner">
-            <div class="banner-left">
-                <p id="banner-summary">Prediksi probabilitas >= 1 gempa pada tahun target berdasarkan model terpilih.</p>
-            </div>
-            <div class="banner-right">
-                <span class="banner-updated" id="banner-updated">Terakhir diperbarui: -</span>
-                <label for="model-select">Pilih Model Prediksi</label>
-                <select id="model-select">
-                    <option value="rf">Random Forest</option>
-                    <option value="svm">SVM</option>
-                    <option value="poisson">Poisson</option>
-                </select>
-            </div>
-        </section>
 
         <main class="dashboard">
             <section class="main-column">
-                <div class="card latest-card">
-                    <div class="card-header">
-                        <h2>Prediksi Terbaru</h2>
-                        <span class="model-pill" id="latest-model-label">-</span>
-                    </div>
-                    <div class="latest-body">
-                        <div class="prob-badge" id="latest-prob">0.00</div>
-                        <div class="latest-info">
-                            <p class="latest-grid" id="latest-grid">Menunggu data grid...</p>
-                            <div class="latest-years">
-                                <span id="latest-feature-year">Tahun fitur: -</span>
-                                <span id="latest-target-year">Tahun prediksi: -</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 <div class="card map-card">
                     <div class="card-header">
                         <div>
                             <h2>Peta Sebaran Prediksi</h2>
-                            <p id="map-meta">Menunggu data prediksi...</p>
                         </div>
                         <span class="model-pill" id="map-model-label">-</span>
                     </div>
-                    <div id="map"></div>
+                    <div class="map-toolbar">
+                        <div class="map-controls">
+                            <label for="model-select">Model Prediksi</label>
+                            <select id="model-select">
+                                <option value="rf">Random Forest</option>
+                                <option value="svm">SVM</option>
+                                <option value="poisson">Poisson</option>
+                            </select>
+                        </div>
+                        <div class="map-controls">
+                            <span class="controls-label">Mode warna</span>
+                            <div class="mode-toggle" id="color-mode-toolbar">
+                                <button class="mode-button active" data-color-mode="risk">Risiko</button>
+                                <button class="mode-button" data-color-mode="probability">Probabilitas</button>
+                                <button class="mode-button" data-color-mode="pop_exposed">Populasi</button>
+                            </div>
+                        </div>
+                        <div class="map-controls">
+                            <label for="risk-threshold">Ambang Risiko (P x Pop)</label>
+                            <div class="slider-row">
+                                <input type="range" id="risk-threshold" min="0" max="1" value="0" step="1">
+                                <span id="risk-threshold-value">≥ 0</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="map">
+                        <div id="map-tooltip" class="map-tooltip"></div>
+                    </div>
+                    <div class="map-summary">
+                        <p id="map-meta" class="map-meta-text">Menunggu data prediksi...</p>
+                        <span id="point-count-label">Menampilkan 0 titik</span>
+                    </div>
+                    <p class="legend-note">Ukuran titik proporsional terhadap risiko (P x Pop).</p>
                     <div class="map-legend">
-                        <span>Probabilitas rendah</span>
-                        <span class="legend-gradient"></span>
-                        <span>Probabilitas tinggi</span>
+                        <div id="legend-categories" class="legend-categories"></div>
+                        <div class="legend-gradient-block" id="legend-gradient-block">
+                            <span id="legend-low-label">Nilai rendah</span>
+                            <span class="legend-gradient" id="legend-gradient"></span>
+                            <span id="legend-high-label">Nilai tinggi</span>
+                        </div>
                     </div>
                 </div>
             </section>
 
             <aside class="side-column">
-                <div class="card risk-card">
+                <div class="card impact-card">
                     <div class="card-header">
-                        <h3>Area Risiko Tertinggi</h3>
-                        <span class="model-pill" id="risk-model-label">-</span>
+                        <h3>Detail Dampak Daerah</h3>
+                        <span class="model-pill" id="impact-model-label">-</span>
                     </div>
-                    <div class="risk-scroll">
-                        <ul id="risk-list" class="risk-list">
-                            <li class="risk-placeholder">Memuat data...</li>
-                        </ul>
+                    <div class="impact-body" id="impact-body">
+                        <div class="impact-placeholder">Pilih titik pada peta untuk melihat rincian risiko.</div>
                     </div>
                 </div>
             </aside>
@@ -365,175 +460,610 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/ol@v9.2.4/dist/ol.js"></script>
-    <script>
-        const MODEL_FIELDS = {
-            rf: { label: "Random Forest", field: "rf_prob" },
-            svm: { label: "SVM", field: "svm_prob" },
-            poisson: { label: "Poisson", field: "poisson_prob" },
+    
+<script>
+    const MODEL_FIELDS = {
+        rf: { label: "Random Forest", field: "rf_prob" },
+        svm: { label: "SVM", field: "svm_prob" },
+        poisson: { label: "Poisson", field: "poisson_prob" },
+    };
+
+    const COLOR_MODE_LABELS = {
+        risk: "Risiko (Probabilitas x Populasi BPS)",
+        probability: "Probabilitas Kejadian",
+        pop_exposed: "Populasi Terpapar (BPS)",
+    };
+
+    const COLOR_PALETTES = {
+        risk: ["#fff7ec", "#fee8c8", "#fdbb84", "#fc8d59", "#d7301f", "#7f0000"],
+        probability: ["#f0f9e8", "#bae4bc", "#7bccc4", "#43a2ca", "#0868ac"],
+        pop_exposed: ["#f5f3ff", "#e0e7ff", "#c7d2fe", "#a5b4fc", "#7c3aed"],
+    };
+
+    const LEGEND_LABELS = {
+        risk: ["Risiko rendah", "Risiko tinggi"],
+        probability: ["Probabilitas rendah", "Probabilitas tinggi"],
+        pop_exposed: ["Paparan kecil", "Paparan besar"],
+    };
+
+    const RISK_COLOR_SCALE = {
+        Ekstrem: "#991b1b",
+        "Sangat Tinggi": "#dc2626",
+        Tinggi: "#f97316",
+        Menengah: "#fbbf24",
+        Rendah: "#22c55e",
+        "Sangat Rendah": "#38bdf8",
+        default: "#94a3b8",
+    };
+
+    const RISK_LEGEND_ORDER = ["Ekstrem", "Sangat Tinggi", "Tinggi", "Menengah", "Rendah", "Sangat Rendah"];
+    const MAX_POINTS = 100;
+
+    const select = document.getElementById("model-select");
+    const headerTargetYear = document.getElementById("header-target-year");
+    const headerUpdated = document.getElementById("header-updated");
+    const mapModelLabel = document.getElementById("map-model-label");
+    const impactModelLabel = document.getElementById("impact-model-label");
+    const mapMeta = document.getElementById("map-meta");
+    const pointCountLabel = document.getElementById("point-count-label");
+    const legendGradient = document.getElementById("legend-gradient");
+    const legendLowLabel = document.getElementById("legend-low-label");
+    const legendHighLabel = document.getElementById("legend-high-label");
+    const legendCategories = document.getElementById("legend-categories");
+    const legendGradientBlock = document.getElementById("legend-gradient-block");
+    const impactBody = document.getElementById("impact-body");
+    const modeButtons = document.querySelectorAll("[data-color-mode]");
+    const riskSlider = document.getElementById("risk-threshold");
+    const riskSliderValue = document.getElementById("risk-threshold-value");
+    const tooltipEl = document.getElementById("map-tooltip");
+
+    let colorMode = "risk";
+    let currentStats = {
+        probability: { min: 0, max: 1 },
+        risk: { min: 0, max: 1 },
+        pop_exposed: { min: 0, max: 1 },
+    };
+    let selectedFeature = null;
+    let hoverFeature = null;
+    let currentFeaturesRaw = [];
+    let allPointProps = [];
+    let riskThresholdValueNumber = 0;
+
+    const baseLayer = new ol.layer.Tile({
+        source: new ol.source.OSM(),
+    });
+
+    const gridSource = new ol.source.Vector();
+
+    const gridLayer = new ol.layer.Vector({
+        source: gridSource,
+        style: (feature) => {
+            const props = feature.getProperties();
+            const color = getFeatureColor(props);
+            const radius = getPointRadius(props);
+            const isSelected = feature.get("isSelected");
+            const isHovered = feature.get("isHovered");
+            const styles = [
+                new ol.style.Style({
+                    image: new ol.style.Circle({
+                        radius,
+                        fill: new ol.style.Fill({
+                            color: colorToCss(color, isSelected ? 0.95 : isHovered ? 0.9 : 0.8),
+                        }),
+                        stroke: new ol.style.Stroke({
+                            color: isHovered ? "#0f172a" : "rgba(15, 23, 42, 0.5)",
+                            width: isSelected ? 1.8 : 1,
+                        }),
+                    }),
+                }),
+            ];
+            if (isSelected) {
+                styles.push(
+                    new ol.style.Style({
+                        image: new ol.style.Circle({
+                            radius: radius + 5,
+                            stroke: new ol.style.Stroke({
+                                color: "rgba(59, 130, 246, 0.6)",
+                                width: 2,
+                            }),
+                        }),
+                    })
+                );
+            }
+            return styles;
+        },
+    });
+
+    const map = new ol.Map({
+        target: "map",
+        layers: [baseLayer, gridLayer],
+        view: new ol.View({
+            center: ol.proj.fromLonLat([118, -2.5]),
+            zoom: 5,
+        }),
+    });
+
+    const tooltipOverlay = new ol.Overlay({
+        element: tooltipEl,
+        offset: [0, -14],
+        positioning: "bottom-center",
+    });
+    map.addOverlay(tooltipOverlay);
+
+    const mapViewport = map.getViewport();
+
+    function colorToCss(color, alpha = 1) {
+        if (!color) {
+            return `rgba(226, 232, 240, ${alpha})`;
+        }
+        if (typeof color === "string") {
+            const rgbColor = hexToRgb(color);
+            return `rgba(${rgbColor.r}, ${rgbColor.g}, ${rgbColor.b}, ${alpha})`;
+        }
+        return `rgba(${color.r}, ${color.g}, ${color.b}, ${alpha})`;
+    }
+
+    function hexToRgb(hex) {
+        const sanitized = hex.replace("#", "");
+        const bigint = parseInt(sanitized, 16);
+        return {
+            r: (bigint >> 16) & 255,
+            g: (bigint >> 8) & 255,
+            b: bigint & 255,
         };
+    }
 
-        const select = document.getElementById("model-select");
-        const bannerSummary = document.getElementById("banner-summary");
-        const bannerUpdated = document.getElementById("banner-updated");
-        const latestModelLabel = document.getElementById("latest-model-label");
-        const riskModelLabel = document.getElementById("risk-model-label");
-        const mapModelLabel = document.getElementById("map-model-label");
-        const mapMeta = document.getElementById("map-meta");
-        const riskList = document.getElementById("risk-list");
-
-        const latestCardEls = {
-            prob: document.getElementById("latest-prob"),
-            grid: document.getElementById("latest-grid"),
-            featureYear: document.getElementById("latest-feature-year"),
-            targetYear: document.getElementById("latest-target-year"),
+    function mixRgb(a, b, t) {
+        return {
+            r: Math.round(a.r + (b.r - a.r) * t),
+            g: Math.round(a.g + (b.g - a.g) * t),
+            b: Math.round(a.b + (b.b - a.b) * t),
         };
+    }
 
-        const baseLayer = new ol.layer.Tile({
-            source: new ol.source.OSM(),
-        });
+    function getMetricValue(props, mode) {
+        if (mode === "probability") {
+            return Number(props.probability) || 0;
+        }
+        if (mode === "pop_exposed") {
+            return Number(props.pop_exposed) || 0;
+        }
+        return Number(props.risk) || 0;
+    }
 
-        const heatSource = new ol.source.Vector();
+    function getScaleValue(mode, value) {
+        const stat = currentStats[mode] || { min: 0, max: 1 };
+        const min = Number(stat.min ?? 0);
+        const max = Number(stat.max ?? 1);
+        if (!Number.isFinite(value) || max <= min) {
+            return 0;
+        }
+        if (mode === "probability") {
+            return (value - min) / (max - min || 1);
+        }
+        const logMin = Math.log10(min + 1);
+        const logMax = Math.log10(max + 1);
+        const logValue = Math.log10(value + 1);
+        const denom = logMax - logMin;
+        return denom <= 0 ? 0 : (logValue - logMin) / denom;
+    }
 
-        const heatLayer = new ol.layer.Heatmap({
-            source: heatSource,
-            blur: 22,
-            radius: 14,
-            weight: (feature) => {
-                const key = `${select.value}_prob`;
-                const value = feature.get(key);
-                if (value == null) {
-                    return 0;
+    function getGradientColor(mode, value) {
+        const palette = COLOR_PALETTES[mode] || ["#e2e8f0", "#0f172a"];
+        const normalized = Math.min(Math.max(getScaleValue(mode, value), 0), 1);
+        if (palette.length === 1) {
+            return hexToRgb(palette[0]);
+        }
+        const steps = palette.length - 1;
+        const scaled = normalized * steps;
+        const idx = Math.floor(scaled);
+        const fraction = scaled - idx;
+        const start = hexToRgb(palette[idx]);
+        const end = hexToRgb(palette[Math.min(idx + 1, steps)]);
+        return mixRgb(start, end, fraction);
+    }
+
+    function getFeatureColor(props) {
+        if (colorMode === "risk") {
+            return RISK_COLOR_SCALE[props.risk_label] || RISK_COLOR_SCALE.default;
+        }
+        const metric = getMetricValue(props, colorMode);
+        return getGradientColor(colorMode, metric);
+    }
+
+    function getPointRadius(props) {
+        const stat = currentStats.risk || { min: 0, max: 1 };
+        const min = Number(stat.min ?? 0);
+        const max = Number(stat.max ?? 1);
+        const value = Number(props.risk) || 0;
+        if (max <= min) {
+            return 6;
+        }
+        const logMin = Math.log10(min + 1);
+        const logMax = Math.log10(max + 1);
+        const logValue = Math.log10(value + 1);
+        const normalized = (logValue - logMin) / ((logMax - logMin) || 1);
+        return 6 + Math.min(Math.max(normalized, 0), 1) * 10;
+    }
+
+    function updateLegend() {
+        if (colorMode === "risk") {
+            legendCategories.style.display = "flex";
+            legendGradientBlock.style.display = "none";
+            legendCategories.innerHTML = RISK_LEGEND_ORDER.map((label) => {
+                const color = RISK_COLOR_SCALE[label] || RISK_COLOR_SCALE.default;
+                return `<span class="legend-badge"><span class="legend-dot" style="background:${color};"></span>${label}</span>`;
+            }).join("");
+            return;
+        }
+        legendCategories.style.display = "none";
+        legendCategories.innerHTML = "";
+        legendGradientBlock.style.display = "flex";
+        const palette = COLOR_PALETTES[colorMode] || COLOR_PALETTES.risk;
+        legendGradient.style.background = `linear-gradient(90deg, ${palette.join(", ")})`;
+        const labels = LEGEND_LABELS[colorMode] || ["Nilai rendah", "Nilai tinggi"];
+        legendLowLabel.textContent = labels[0];
+        legendHighLabel.textContent = labels[1];
+    }
+
+    function describeProbability(prob) {
+        const value = Number(prob) || 0;
+        if (value >= 0.75) return "Sangat tinggi";
+        if (value >= 0.5) return "Tinggi";
+        if (value >= 0.25) return "Sedang";
+        if (value >= 0.1) return "Rendah";
+        return "Sangat rendah";
+    }
+
+    function formatPercent(prob) {
+        return `${(Number(prob || 0) * 100).toFixed(1)}%`;
+    }
+
+    function formatNumber(value) {
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric)) return "-";
+        return numeric.toLocaleString("id-ID");
+    }
+
+    function buildImpactBullets(props) {
+        if (!props) {
+            return ["Pilih titik pada peta untuk melihat ringkasan risiko."];
+        }
+        const probabilityText = `${formatPercent(props.probability)} (${describeProbability(props.probability)})`;
+        const riskValue = formatNumber(Math.round(props.risk || 0));
+        const popText = formatNumber(props.pop_exposed);
+        return [
+            `Risiko keseluruhan ${props.risk_label || "-"} (~${riskValue} jiwa ekuivalen).`,
+            `Probabilitas ${probabilityText} untuk minimal satu kejadian.`,
+            `Populasi terpapar ~${popText} jiwa (BPS kab/kota).`,
+        ];
+    }
+
+    function formatLocationName(props) {
+        const kab = props?.kab_kota;
+        const prov = props?.provinsi;
+        if (!kab) {
+            return prov ? `Laut / Perairan - ${prov}` : "Laut / Perairan";
+        }
+        const lowered = kab.toLowerCase();
+        if (lowered.includes("laut") || lowered.includes("perairan")) {
+            return "Laut / Perairan";
+        }
+        return prov ? `${kab} - ${prov}` : kab;
+    }
+
+    function setUpdatedNow() {
+        if (!headerUpdated) return;
+        const now = new Date();
+        const hh = String(now.getHours()).padStart(2, "0");
+        const mm = String(now.getMinutes()).padStart(2, "0");
+        const ss = String(now.getSeconds()).padStart(2, "0");
+        headerUpdated.textContent = `Update: ${hh}:${mm}:${ss}`;
+    }
+
+    function updateHeaderSummary(best, modelKey) {
+        if (!headerTargetYear) {
+            return;
+        }
+        const label = MODEL_FIELDS[modelKey]?.label || "-";
+        const targetYear = best?.target_year ?? "-";
+        headerTargetYear.textContent = `Tahun prediksi: ${targetYear} | Model ${label}`;
+    }
+
+    function updateMapSummary(features, modelKey, shownCount) {
+        const label = MODEL_FIELDS[modelKey]?.label || "-";
+        mapModelLabel.textContent = label;
+        if (!features || !features.length) {
+            mapMeta.textContent = "Data prediksi tidak tersedia.";
+            pointCountLabel.textContent = "Menampilkan 0 titik.";
+            return;
+        }
+        const first = features[0]?.properties || {};
+        mapMeta.textContent = `Tahun fitur ${first.year ?? "-"} | Tahun prediksi ${first.target_year ?? "-"} | Total grid ${features.length} | Mode warna: ${COLOR_MODE_LABELS[colorMode]}`;
+        pointCountLabel.textContent = `Menampilkan ${shownCount} titik risiko teratas (ambang >= ${formatNumber(Math.round(riskThresholdValueNumber))}).`;
+    }
+
+    function extractProps(feature) {
+        if (!feature) return null;
+        const { geometry, ...props } = feature.getProperties();
+        return props;
+    }
+
+    function resetPanel(message = "Pilih titik pada peta untuk melihat ringkasan risiko.") {
+        impactBody.innerHTML = `<div class="impact-placeholder">${message}</div>`;
+    }
+
+    function updateImpactPanel(feature) {
+        const props = extractProps(feature);
+        if (!props) {
+            resetPanel();
+            return;
+        }
+        const bullets = buildImpactBullets(props)
+            .map((item) => `<li>${item}</li>`)
+            .join("");
+        impactBody.innerHTML = `
+            <div>
+                <p class="impact-region">${formatLocationName(props)}</p>
+                <p class="impact-subtitle">Grid ${props.grid_id || "-"} | Risiko ${props.risk_label || "-"}</p>
+            </div>
+            <div class="impact-grid">
+                <div class="impact-metric">
+                    <span>Probabilitas</span>
+                    <strong>${formatPercent(props.probability)}</strong>
+                    <small>${describeProbability(props.probability)}</small>
+                </div>
+                <div class="impact-metric">
+                    <span>Populasi terpapar</span>
+                    <strong>${formatNumber(props.pop_exposed)}</strong>
+                    <small>Sumber: BPS kab/kota</small>
+                </div>
+                    <div class="impact-metric">
+                        <span>Risiko (P x Pop)</span>
+                    <strong>${formatNumber(Math.round(props.risk || 0))}</strong>
+                    <small>${props.risk_label || "-"}</small>
+                </div>
+            </div>
+            <ul class="impact-bullets">${bullets}</ul>
+        `;
+    }
+
+    function setSelectedFeature(feature, options = {}) {
+        const { skipZoom = false, silent = false } = options;
+        if (selectedFeature === feature) {
+            if (!silent && feature) {
+                updateImpactPanel(feature);
+            }
+            return;
+        }
+        if (selectedFeature) {
+            selectedFeature.set("isSelected", false);
+            selectedFeature.changed();
+        }
+        selectedFeature = feature || null;
+        if (selectedFeature) {
+            selectedFeature.set("isSelected", true);
+            selectedFeature.changed();
+            if (!silent) {
+                updateImpactPanel(selectedFeature);
+            }
+            if (!skipZoom) {
+                const geometry = selectedFeature.getGeometry();
+                if (geometry) {
+                    const view = map.getView();
+                    const currentZoom = view.getZoom() || 5;
+                    view.animate({
+                        center: geometry.getCoordinates(),
+                        duration: 450,
+                        zoom: Math.min(7.5, Math.max(currentZoom, 5.8) + 0.25),
+                    });
                 }
-                return Math.max(0, Math.min(1, Number(value)));
-            },
-        });
-
-        const map = new ol.Map({
-            target: "map",
-            layers: [baseLayer, heatLayer],
-            view: new ol.View({
-                center: ol.proj.fromLonLat([118, -2.5]),
-                zoom: 5,
-            }),
-        });
-
-        const formatProb = (value) => Number(value || 0).toFixed(2);
-
-        function setUpdatedNow() {
-            if (!bannerUpdated) return;
-            const now = new Date();
-            const hh = String(now.getHours()).padStart(2, "0");
-            const mm = String(now.getMinutes()).padStart(2, "0");
-            const ss = String(now.getSeconds()).padStart(2, "0");
-            bannerUpdated.textContent = `Terakhir diperbarui: ${hh}:${mm}:${ss}`;
-        }
-
-        function updateBanner(best, modelKey) {
-            const label = MODEL_FIELDS[modelKey].label;
-            const targetYear = best?.target_year ?? "-";
-            bannerSummary.textContent = `Prediksi probabilitas >= 1 gempa pada tahun ${targetYear} berdasarkan model ${label}.`;
-        }
-
-        function updateMapSummary(features, modelKey) {
-            const label = MODEL_FIELDS[modelKey].label;
-            mapModelLabel.textContent = label;
-            if (!features || !features.length) {
-                mapMeta.textContent = "Data prediksi tidak tersedia.";
-                return;
             }
-            const first = features[0].properties || {};
-            mapMeta.textContent = `Tahun fitur ${first.year ?? "-"} | Tahun prediksi ${first.target_year ?? "-"} | Total grid ${features.length}`;
+        } else if (!silent) {
+            resetPanel();
         }
+    }
 
-        function renderTopList(items, modelKey) {
-            const label = MODEL_FIELDS[modelKey].label;
-            riskModelLabel.textContent = label;
-            if (!riskList) {
-                return;
-            }
-            if (!items || items.length === 0) {
-                riskList.innerHTML = '<li class="risk-placeholder">Data tidak tersedia.</li>';
-                return;
-            }
-            const field = `${modelKey}_prob`;
-            riskList.innerHTML = "";
-            items.forEach((props) => {
-                if (!props) return;
-                const li = document.createElement("li");
-                li.className = "risk-item";
-                li.innerHTML = `
-                    <div class="risk-info">
-                        <span class="risk-title">Grid ${props.grid_id}</span>
-                        <span class="risk-meta">${props.year} -> ${props.target_year}</span>
-                    </div>
-                    <span class="risk-badge">${formatProb(props[field])}</span>
-                `;
-                riskList.appendChild(li);
+    function setHoverFeature(feature) {
+        if (hoverFeature === feature) return;
+        if (hoverFeature) {
+            hoverFeature.set("isHovered", false);
+            hoverFeature.changed();
+        }
+        hoverFeature = feature || null;
+        if (hoverFeature) {
+            hoverFeature.set("isHovered", true);
+            hoverFeature.changed();
+        }
+    }
+
+    function showTooltip(feature, coordinate) {
+        const props = extractProps(feature);
+        if (!props) {
+            hideTooltip();
+            return;
+        }
+        tooltipEl.innerHTML = `
+            <strong>${formatLocationName(props)}</strong><br>
+            Risiko: ${props.risk_label || "-"} | ${formatPercent(props.probability)}<br>
+            Populasi: ${formatNumber(props.pop_exposed)}
+        `;
+        tooltipEl.classList.add("visible");
+        tooltipOverlay.setPosition(coordinate);
+    }
+
+    function hideTooltip() {
+        tooltipEl.classList.remove("visible");
+        tooltipOverlay.setPosition(undefined);
+    }
+
+    function computePointProps(features) {
+        return (features || [])
+            .map((feature) => {
+                const props = { ...(feature?.properties || {}) };
+                let lat = Number(props.centroid_lat);
+                let lon = Number(props.centroid_lon);
+                if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+                    const baseLat = Number(props.grid_lat);
+                    const baseLon = Number(props.grid_lon);
+                    if (Number.isFinite(baseLat) && Number.isFinite(baseLon)) {
+                        lat = baseLat + 0.5;
+                        lon = baseLon + 0.5;
+                    } else if (props.grid_id && String(props.grid_id).includes("_")) {
+                        const [rawLat, rawLon] = String(props.grid_id).split("_");
+                        const latNum = Number(rawLat);
+                        const lonNum = Number(rawLon);
+                        if (Number.isFinite(latNum) && Number.isFinite(lonNum)) {
+                            lat = latNum + 0.5;
+                            lon = lonNum + 0.5;
+                        }
+                    }
+                }
+                if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+                    return null;
+                }
+                props.centroid_lat = lat;
+                props.centroid_lon = lon;
+                return props;
+            })
+            .filter(Boolean);
+    }
+
+    function refreshPoints(options = {}) {
+        if (!allPointProps.length) {
+            gridSource.clear();
+            updateMapSummary(currentFeaturesRaw, select.value, 0);
+            resetPanel();
+            return;
+        }
+        const threshold = Number(riskSlider.value) || 0;
+        riskThresholdValueNumber = threshold;
+        riskSliderValue.textContent = `>= ${formatNumber(Math.round(threshold))}`;
+        const sorted = [...allPointProps].sort((a, b) => (b.risk || 0) - (a.risk || 0));
+        const filtered = threshold ? sorted.filter((item) => (item.risk || 0) >= threshold) : sorted;
+        const limited = filtered.slice(0, MAX_POINTS);
+        const previousSelectedId = selectedFeature?.get("grid_id");
+        setSelectedFeature(null, { skipZoom: true, silent: true });
+        gridSource.clear();
+        limited.forEach((props) => {
+            const feature = new ol.Feature({
+                geometry: new ol.geom.Point(ol.proj.fromLonLat([props.centroid_lon, props.centroid_lat])),
             });
+            feature.setProperties(props);
+            gridSource.addFeature(feature);
+        });
+        if (previousSelectedId) {
+            const nextMatch = gridSource.getFeatures().find(
+                (feat) => feat.get("grid_id") === previousSelectedId
+            );
+            if (nextMatch) {
+                setSelectedFeature(nextMatch, { skipZoom: true });
+            }
+        }
+        if (!selectedFeature && options.autoSelect && gridSource.getFeatures().length) {
+            setSelectedFeature(gridSource.getFeatures()[0], { skipZoom: true });
+        }
+        if (!gridSource.getFeatures().length) {
+            resetPanel("Tidak ada grid yang memenuhi ambang risiko ini.");
+        }
+        updateMapSummary(currentFeaturesRaw, select.value, limited.length);
+        updateLegend();
+    }
+
+    async function loadGrid() {
+        const modelKey = select.value;
+        impactModelLabel.textContent = MODEL_FIELDS[modelKey]?.label || "-";
+        mapMeta.textContent = "Memuat data grid...";
+        pointCountLabel.textContent = "Menampilkan 0 titik.";
+        resetPanel("Memuat data prediksi...");
+        try {
+            const res = await fetch(`/api/prediksi/?model=${modelKey}`);
+            if (!res.ok) {
+                throw new Error(`Gagal memuat data (${res.status})`);
+            }
+            const geo = await res.json();
+            currentStats = geo?.meta?.stats || currentStats;
+            currentFeaturesRaw = geo.features || [];
+            allPointProps = computePointProps(currentFeaturesRaw);
+            const topRisk = [...allPointProps].sort((a, b) => (b.risk || 0) - (a.risk || 0))[0];
+            configureSlider();
+            refreshPoints({ autoSelect: true });
+            updateHeaderSummary(topRisk, modelKey);
+            setUpdatedNow();
+        } catch (error) {
+            console.error(error);
+            gridSource.clear();
+            currentFeaturesRaw = [];
+            allPointProps = [];
+            mapMeta.textContent = "Tidak dapat memuat data.";
+            pointCountLabel.textContent = "Menampilkan 0 titik.";
+            resetPanel("Gagal memuat data prediksi. Periksa kembali server Anda.");
+            updateHeaderSummary(null, select.value);
+            alert("Gagal memuat data prediksi grid. Pastikan endpoint Django berjalan dan data tersedia.");
+        }
+    }
+
+        function configureSlider() {
+            const riskMax = Number(currentStats?.risk?.max) || 1;
+            const sliderMax = Math.max(1, Math.round(riskMax));
+            riskSlider.max = sliderMax;
+            riskSlider.step = Math.max(1, Math.round(sliderMax / 200)) || 1;
+            riskSlider.min = 0;
+            riskSlider.value = 0;
+            riskThresholdValueNumber = 0;
+            riskSliderValue.textContent = `>= ${formatNumber(Math.round(riskThresholdValueNumber))}`;
         }
 
-        function updateLatestCard(best, modelKey) {
-            const label = MODEL_FIELDS[modelKey].label;
-            latestModelLabel.textContent = label;
-            if (!best) {
-                latestCardEls.prob.textContent = "0.00";
-                latestCardEls.grid.textContent = "Data tidak tersedia";
-                latestCardEls.featureYear.textContent = "Tahun fitur: -";
-                latestCardEls.targetYear.textContent = "Tahun prediksi: -";
+    modeButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+            const selectedMode = button.getAttribute("data-color-mode");
+            if (!selectedMode || selectedMode === colorMode) {
                 return;
             }
-            const field = `${modelKey}_prob`;
-            latestCardEls.prob.textContent = formatProb(best[field]);
-            latestCardEls.grid.textContent = `Grid ${best.grid_id}`;
-            latestCardEls.featureYear.textContent = `Tahun fitur: ${best.year ?? "-"}`;
-            latestCardEls.targetYear.textContent = `Tahun prediksi: ${best.target_year ?? "-"}`;
-        }
-
-        async function loadHeat() {
-            const modelKey = select.value;
-            mapMeta.textContent = "Memuat data peta...";
-            riskList.innerHTML = '<li class="risk-placeholder">Memuat data...</li>';
-            try {
-                const res = await fetch(`/api/prediksi/points/?model=${modelKey}`);
-                if (!res.ok) {
-                    throw new Error(`Gagal memuat data (${res.status})`);
-                }
-                const geo = await res.json();
-
-                const format = new ol.format.GeoJSON();
-                const feats = format.readFeatures(geo, {
-                    featureProjection: "EPSG:3857",
-                    dataProjection: "EPSG:4326",
-                });
-
-                heatSource.clear();
-                heatSource.addFeatures(feats);
-
-                updateMapSummary(geo.features, modelKey);
-                const enriched = (geo.features || []).map((f) => f?.properties || {});
-                enriched.sort((a, b) => (b?.[`${modelKey}_prob`] || 0) - (a?.[`${modelKey}_prob`] || 0));
-                const top = enriched.slice(0, 12);
-
-                renderTopList(top, modelKey);
-                updateLatestCard(top[0], modelKey);
-                updateBanner(top[0], modelKey);
-                setUpdatedNow();
-            } catch (error) {
-                console.error(error);
-                heatSource.clear();
-                mapMeta.textContent = "Tidak dapat memuat data.";
-                riskList.innerHTML = '<li class="risk-placeholder">Gagal memuat data.</li>';
-                updateLatestCard(null, select.value);
-                updateBanner(null, select.value);
-                alert("Gagal memuat data prediksi. Periksa server Django Anda.");
-            }
-        }
-
-        select.addEventListener("change", () => {
-            loadHeat();
+            colorMode = selectedMode;
+            modeButtons.forEach((btn) => {
+                btn.classList.toggle("active", btn === button);
+            });
+            updateLegend();
+            updateMapSummary(currentFeaturesRaw, select.value, gridSource.getFeatures().length);
+            gridLayer.changed();
         });
+    });
 
-        loadHeat();
-    </script>
+    riskSlider.addEventListener("input", () => {
+        refreshPoints();
+    });
+
+    select.addEventListener("change", () => {
+        loadGrid();
+    });
+
+    map.on("pointermove", (evt) => {
+        if (evt.dragging) {
+            hideTooltip();
+            return;
+        }
+        const feature = map.forEachFeatureAtPixel(evt.pixel, (feat) => feat);
+        setHoverFeature(feature);
+        if (feature) {
+            showTooltip(feature, evt.coordinate);
+            mapViewport.style.cursor = "pointer";
+        } else {
+            hideTooltip();
+            mapViewport.style.cursor = "default";
+        }
+    });
+
+    map.on("singleclick", (evt) => {
+        const feature = map.forEachFeatureAtPixel(evt.pixel, (feat) => feat);
+        setSelectedFeature(feature || null);
+    });
+
+    mapViewport.addEventListener("mouseleave", hideTooltip);
+
+    updateLegend();
+    loadGrid();
+</script>
+
 </body>
 </html>
