@@ -113,11 +113,45 @@
             font-weight: 600;
         }
 
+        .map-controls small {
+            color: #94a3b8;
+            font-size: 0.78rem;
+        }
+
+        #warning-threshold {
+            padding: 10px 14px;
+            border-radius: 12px;
+            border: 1px solid #cbd5f5;
+            font-size: 0.95rem;
+            background: #fff;
+            color: #0f172a;
+        }
+
         .dashboard {
             display: grid;
             grid-template-columns: minmax(0, 72%) minmax(280px, 28%);
             gap: 24px;
             align-items: stretch;
+        }
+
+        .decision-banner {
+            border-radius: 14px;
+            border: 1px solid #f97316;
+            background: rgba(249, 115, 22, 0.08);
+            color: #7c2d12;
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .decision-banner strong {
+            font-size: 0.95rem;
+        }
+
+        .decision-banner small {
+            color: #9a3412;
+            font-size: 0.78rem;
         }
 
         .card {
@@ -388,6 +422,8 @@
                     <span id="header-target-year">Tahun prediksi: -</span>
                     <span class="meta-divider">•</span>
                     <span id="header-updated">Update: -</span>
+                    <span class="meta-divider">•</span>
+                    <span>Wilayah: Provinsi Jawa Barat (106.3-108.9 BT / -7.8--5.9 LS)</span>
                 </div>
             </div>
         </header>
@@ -425,6 +461,11 @@
                                 <span id="risk-threshold-value">≥ 0</span>
                             </div>
                         </div>
+                        <div class="map-controls">
+                            <label for="warning-threshold">Notifikasi probabilitas</label>
+                            <input type="number" id="warning-threshold" min="0" max="1" step="0.05" value="0.7">
+                            <small>Digunakan sebagai ambang informasi dukungan keputusan (bukan peringatan resmi)</small>
+                        </div>
                     </div>
                     <div id="map">
                         <div id="map-tooltip" class="map-tooltip"></div>
@@ -432,6 +473,13 @@
                     <div class="map-summary">
                         <p id="map-meta" class="map-meta-text">Menunggu data prediksi...</p>
                         <span id="point-count-label">Menampilkan 0 titik</span>
+                    </div>
+                    <div id="decision-banner" class="decision-banner" hidden>
+                        <strong>Informasi dukungan keputusan</strong>
+                        <span id="decision-banner-text">
+                            Sistem akan menampilkan notifikasi jika probabilitas model melampaui ambang yang ditentukan.
+                        </span>
+                        <small>Fitur ini bukan sistem peringatan dini resmi. Rujuk BMKG/BPBD untuk instruksi resmi.</small>
                     </div>
                     <p class="legend-note">Ukuran titik proporsional terhadap risiko (P x Pop).</p>
                     <div class="map-legend">
@@ -467,6 +515,9 @@
         svm: { label: "SVM", field: "svm_prob" },
         poisson: { label: "Poisson", field: "poisson_prob" },
     };
+
+    const WEST_JAVA_BOUNDS = [106.3, -7.8, 108.9, -5.9];
+    const DEFAULT_WARNING_THRESHOLD = 0.7;
 
     const COLOR_MODE_LABELS = {
         risk: "Risiko (Probabilitas x Populasi BPS)",
@@ -516,6 +567,9 @@
     const riskSlider = document.getElementById("risk-threshold");
     const riskSliderValue = document.getElementById("risk-threshold-value");
     const tooltipEl = document.getElementById("map-tooltip");
+    const warningInput = document.getElementById("warning-threshold");
+    const decisionBanner = document.getElementById("decision-banner");
+    const decisionBannerText = document.getElementById("decision-banner-text");
 
     let colorMode = "risk";
     let currentStats = {
@@ -574,13 +628,23 @@
         },
     });
 
+    const view = new ol.View({
+        center: ol.proj.fromLonLat([107.6, -6.8]),
+        zoom: 7,
+        minZoom: 6,
+        maxZoom: 12,
+        extent: ol.proj.transformExtent(WEST_JAVA_BOUNDS, "EPSG:4326", "EPSG:3857"),
+        constrainOnlyCenter: true,
+    });
+
     const map = new ol.Map({
         target: "map",
         layers: [baseLayer, gridLayer],
-        view: new ol.View({
-            center: ol.proj.fromLonLat([118, -2.5]),
-            zoom: 5,
-        }),
+        view,
+    });
+    view.fit(ol.proj.transformExtent(WEST_JAVA_BOUNDS, "EPSG:4326", "EPSG:3857"), {
+        padding: [40, 40, 40, 40],
+        duration: 0,
     });
 
     const tooltipOverlay = new ol.Overlay({
@@ -591,6 +655,14 @@
     map.addOverlay(tooltipOverlay);
 
     const mapViewport = map.getViewport();
+
+    function isWithinWestJava(lon, lat) {
+        if (!Number.isFinite(lon) || !Number.isFinite(lat)) {
+            return false;
+        }
+        const [minLon, minLat, maxLon, maxLat] = WEST_JAVA_BOUNDS;
+        return lon >= minLon && lon <= maxLon && lat >= minLat && lat <= maxLat;
+    }
 
     function colorToCss(color, alpha = 1) {
         if (!color) {
@@ -922,11 +994,61 @@
                 if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
                     return null;
                 }
+                if (!isWithinWestJava(lon, lat)) {
+                    return null;
+                }
                 props.centroid_lat = lat;
                 props.centroid_lon = lon;
                 return props;
             })
             .filter(Boolean);
+    }
+
+    function clampWarningThreshold(value) {
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric)) {
+            return DEFAULT_WARNING_THRESHOLD;
+        }
+        return Math.min(1, Math.max(0, numeric));
+    }
+
+    function findDecisionSupportCandidate(threshold) {
+        if (!Array.isArray(currentFeaturesRaw)) {
+            return null;
+        }
+        let candidate = null;
+        for (const feature of currentFeaturesRaw) {
+            const props = feature?.properties;
+            if (!props) continue;
+            const probability = Number(props.probability);
+            if (!Number.isFinite(probability) || probability < threshold) {
+                continue;
+            }
+            if (!candidate || probability > candidate.probability) {
+                candidate = { probability, props };
+            }
+        }
+        return candidate;
+    }
+
+    function updateDecisionSupportNotice() {
+        if (!decisionBanner || !warningInput) {
+            return;
+        }
+        const threshold = clampWarningThreshold(warningInput.value);
+        warningInput.value = threshold.toFixed(2);
+        const candidate = findDecisionSupportCandidate(threshold);
+        if (!candidate) {
+            decisionBanner.hidden = true;
+            decisionBannerText.textContent =
+                "Belum ada grid dengan probabilitas yang melampaui ambang dukungan keputusan.";
+            return;
+        }
+        decisionBanner.hidden = false;
+        const location = formatLocationName(candidate.props) || "Lokasi grid";
+        const probabilityText = formatPercent(candidate.probability);
+        const thresholdText = formatPercent(threshold);
+        decisionBannerText.textContent = `Model memperkirakan probabilitas ${probabilityText} di ${location}, melebihi ambang dukungan keputusan ${thresholdText}. Gunakan informasi ini sebagai pertimbangan tambahan saja.`;
     }
 
     function refreshPoints(options = {}) {
@@ -968,6 +1090,7 @@
         }
         updateMapSummary(currentFeaturesRaw, select.value, limited.length);
         updateLegend();
+        updateDecisionSupportNotice();
     }
 
     async function loadGrid() {
@@ -1033,6 +1156,16 @@
     riskSlider.addEventListener("input", () => {
         refreshPoints();
     });
+
+    if (warningInput) {
+        warningInput.value = DEFAULT_WARNING_THRESHOLD.toFixed(2);
+        warningInput.addEventListener("input", () => {
+            updateDecisionSupportNotice();
+        });
+        warningInput.addEventListener("change", () => {
+            updateDecisionSupportNotice();
+        });
+    }
 
     select.addEventListener("change", () => {
         loadGrid();

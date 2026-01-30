@@ -15,6 +15,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 PRED_PATH = BASE_DIR / "data" / "processed" / "grid_predictions.csv"
 GRID_SIZE = 1.0
 
+WEST_JAVA_LAT_MIN = -7.8
+WEST_JAVA_LAT_MAX = -5.9
+WEST_JAVA_LON_MIN = 106.3
+WEST_JAVA_LON_MAX = 108.9
+WEST_JAVA_BBOX = (WEST_JAVA_LON_MIN, WEST_JAVA_LAT_MIN, WEST_JAVA_LON_MAX, WEST_JAVA_LAT_MAX)
+WEST_JAVA_PROVINCE_NORM = "jawabarat"
+
 GRID_PATH = BASE_DIR / "data" / "processed" / "grid_yearly_dataset.csv"
 TRAIN_PATH = BASE_DIR / "data" / "processed" / "training_dataset.csv"
 MODELS_DIR = BASE_DIR / "ml_models"
@@ -170,6 +177,75 @@ def _format_kab_kota_label(label: object) -> str:
     return title
 
 
+def _bbox_overlaps(
+    bbox: tuple[float, float, float, float] | None, region: tuple[float, float, float, float] = WEST_JAVA_BBOX
+) -> bool:
+    if bbox is None:
+        return False
+    min_lon, min_lat, max_lon, max_lat = bbox
+    region_min_lon, region_min_lat, region_max_lon, region_max_lat = region
+    return not (
+        max_lon < region_min_lon
+        or min_lon > region_max_lon
+        or max_lat < region_min_lat
+        or min_lat > region_max_lat
+    )
+
+
+def _parse_bbox_param(value: str) -> tuple[float, float, float, float]:
+    try:
+        parts = [float(part.strip()) for part in value.split(",")]
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Parameter bbox harus berupa 'min_lon,min_lat,max_lon,max_lat'.") from exc
+    if len(parts) != 4:
+        raise ValueError("Parameter bbox harus memuat empat angka: min_lon,min_lat,max_lon,max_lat.")
+    min_lon, min_lat, max_lon, max_lat = parts
+    if min_lon >= max_lon or min_lat >= max_lat:
+        raise ValueError("Nilai bbox tidak valid: pastikan min < max.")
+    return (min_lon, min_lat, max_lon, max_lat)
+
+
+def _bbox_within_region(
+    bbox: tuple[float, float, float, float], region: tuple[float, float, float, float] = WEST_JAVA_BBOX
+) -> bool:
+    min_lon, min_lat, max_lon, max_lat = bbox
+    region_min_lon, region_min_lat, region_max_lon, region_max_lat = region
+    return (
+        region_min_lon <= min_lon < max_lon <= region_max_lon
+        and region_min_lat <= min_lat < max_lat <= region_max_lat
+    )
+
+
+def _get_requested_bbox(request) -> tuple[float, float, float, float]:
+    bbox_param = request.GET.get("bbox")
+    if not bbox_param:
+        return WEST_JAVA_BBOX
+    bbox = _parse_bbox_param(bbox_param)
+    if not _bbox_within_region(bbox, WEST_JAVA_BBOX):
+        raise ValueError(
+            "Permintaan berada di luar batas Jawa Barat "
+            "(lat -7.8 s/d -5.9 dan lon 106.3 s/d 108.9)."
+        )
+    return bbox
+
+
+def _filter_predictions_by_bbox(
+    df: pd.DataFrame, bbox: tuple[float, float, float, float]
+) -> pd.DataFrame:
+    min_lon, min_lat, max_lon, max_lat = bbox
+    lat_series = pd.to_numeric(df["grid_lat"], errors="coerce") + GRID_SIZE / 2.0
+    lon_series = pd.to_numeric(df["grid_lon"], errors="coerce") + GRID_SIZE / 2.0
+    mask = (
+        lat_series.notna()
+        & lon_series.notna()
+        & (lat_series >= min_lat)
+        & (lat_series <= max_lat)
+        & (lon_series >= min_lon)
+        & (lon_series <= max_lon)
+    )
+    return df.loc[mask].copy()
+
+
 def _geometry_bbox(geometry: dict) -> tuple[float, float, float, float] | None:
     coords = geometry.get("coordinates")
     if not coords:
@@ -257,13 +333,19 @@ def _load_admin_features() -> list[dict]:
         kab_raw = props.get("alt_name") or props.get("ALT_NAME") or props.get("name")
         prov_label = _format_province_label(prov_raw)
         kab_label = _format_kab_kota_label(kab_raw)
+        prov_norm = _normalize_province(prov_label)
+        bbox = _geometry_bbox(geometry)
+        if prov_norm != WEST_JAVA_PROVINCE_NORM:
+            continue
+        if not _bbox_overlaps(bbox, WEST_JAVA_BBOX):
+            continue
         features.append(
             {
                 "geometry": geometry,
-                "bbox": _geometry_bbox(geometry),
+                "bbox": bbox,
                 "provinsi": prov_label,
                 "kab_kota": kab_label,
-                "prov_norm": _normalize_province(prov_label),
+                "prov_norm": prov_norm,
                 "kab_norm": _normalize_kab_kota(kab_label),
             }
         )
@@ -284,6 +366,7 @@ def _get_population_lookup() -> dict[tuple[str, str], float]:
         return _POP_LOOKUP_CACHE
     df["jumlah_penduduk"] = pd.to_numeric(df["jumlah_penduduk"], errors="coerce")
     df["prov_norm"] = df["provinsi"].apply(_normalize_province)
+    df = df[df["prov_norm"] == WEST_JAVA_PROVINCE_NORM]
     df["kab_norm"] = df["kabupaten"].apply(_normalize_kab_kota)
     grouped = (
         df.dropna(subset=["prov_norm", "kab_norm"])
@@ -310,6 +393,15 @@ def _load_grid_lookup() -> dict[str, dict[str, str]]:
         _GRID_LOOKUP_CACHE = {}
         return _GRID_LOOKUP_CACHE
     df = pd.read_csv(PRED_PATH)
+    required_cols = {"grid_id", "grid_lat", "grid_lon"}
+    missing = [col for col in required_cols if col not in df.columns]
+    if missing:
+        _GRID_LOOKUP_CACHE = {}
+        return _GRID_LOOKUP_CACHE
+    df = _filter_predictions_by_bbox(df, WEST_JAVA_BBOX)
+    if df.empty:
+        _GRID_LOOKUP_CACHE = {}
+        return _GRID_LOOKUP_CACHE
     unique_grids = df[["grid_id", "grid_lat", "grid_lon"]].drop_duplicates()
     lookup: dict[str, dict[str, str]] = {}
     for _, row in unique_grids.iterrows():
@@ -381,6 +473,18 @@ def prediksi_geojson(request):
         return JsonResponse(
             {"error": f"Kolom hilang di grid_predictions.csv: {', '.join(missing)}"},
             status=500,
+        )
+
+    try:
+        requested_bbox = _get_requested_bbox(request)
+    except ValueError as exc:
+        return JsonResponse({"error": str(exc)}, status=400)
+
+    df = _filter_predictions_by_bbox(df, requested_bbox)
+    if df.empty:
+        return JsonResponse(
+            {"error": "Tidak ada data prediksi di dalam batas koordinat yang diminta."},
+            status=404,
         )
 
     grid_lookup = _load_grid_lookup()
@@ -464,6 +568,12 @@ def prediksi_geojson(request):
                 "property": MODEL_FIELDS[model_key],
                 "stats": stats,
                 "color_modes": ["risk", "probability", "pop_exposed"],
+                "bounds": {
+                    "min_lon": requested_bbox[0],
+                    "min_lat": requested_bbox[1],
+                    "max_lon": requested_bbox[2],
+                    "max_lat": requested_bbox[3],
+                },
             },
         }
     )
@@ -489,6 +599,18 @@ def prediksi_points(request):
         return JsonResponse(
             {"error": f"Kolom hilang di grid_predictions.csv: {', '.join(missing)}"},
             status=500,
+        )
+
+    try:
+        requested_bbox = _get_requested_bbox(request)
+    except ValueError as exc:
+        return JsonResponse({"error": str(exc)}, status=400)
+
+    df = _filter_predictions_by_bbox(df, requested_bbox)
+    if df.empty:
+        return JsonResponse(
+            {"error": "Tidak ada data prediksi di dalam batas koordinat yang diminta."},
+            status=404,
         )
 
     features = []
@@ -517,7 +639,18 @@ def prediksi_points(request):
             }
         )
 
-    return JsonResponse({"type": "FeatureCollection", "features": features})
+    return JsonResponse(
+        {
+            "type": "FeatureCollection",
+            "features": features,
+            "bounds": {
+                "min_lon": requested_bbox[0],
+                "min_lat": requested_bbox[1],
+                "max_lon": requested_bbox[2],
+                "max_lat": requested_bbox[3],
+            },
+        }
+    )
 
 
 def main():
