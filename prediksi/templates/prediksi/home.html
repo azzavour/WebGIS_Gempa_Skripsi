@@ -154,6 +154,21 @@
             font-size: 0.78rem;
         }
 
+        .decision-note,
+        .decision-note-inline {
+            font-size: 0.85rem;
+            color: #b45309;
+            font-weight: 600;
+        }
+
+        .decision-note {
+            margin: 0;
+        }
+
+        .decision-note-inline {
+            display: inline-block;
+        }
+
         .card {
             background: #ffffff;
             border-radius: 20px;
@@ -388,6 +403,42 @@
             color: #1d4ed8;
         }
 
+        .impact-recommendations {
+            margin-top: 14px;
+            border-radius: 14px;
+            border: 1px dashed #fcd34d;
+            background: #fffbeb;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .impact-recommendations-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #b45309;
+        }
+
+        .recommendation-list {
+            margin: 0;
+            padding-left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            color: #7c2d12;
+            font-size: 0.9rem;
+        }
+
+        .recommendation-note {
+            font-size: 0.75rem;
+            color: #b45309;
+        }
+
         .impact-placeholder {
             padding: 18px;
             border-radius: 14px;
@@ -425,6 +476,7 @@
                     <span class="meta-divider">•</span>
                     <span>Wilayah: Provinsi Jawa Barat (106.3-108.9 BT / -7.8--5.9 LS)</span>
                 </div>
+                <p class="decision-note">Decision Support System, not official early warning.</p>
             </div>
         </header>
 
@@ -455,7 +507,7 @@
                             </div>
                         </div>
                         <div class="map-controls">
-                            <label for="risk-threshold">Ambang Risiko (P x Pop)</label>
+                            <label for="risk-threshold">Ambang Exposure (P x Pop)</label>
                             <div class="slider-row">
                                 <input type="range" id="risk-threshold" min="0" max="1" value="0" step="1">
                                 <span id="risk-threshold-value">≥ 0</span>
@@ -473,6 +525,7 @@
                     <div class="map-summary">
                         <p id="map-meta" class="map-meta-text">Menunggu data prediksi...</p>
                         <span id="point-count-label">Menampilkan 0 titik</span>
+                        <span class="decision-note-inline">Decision Support System, not official early warning.</span>
                     </div>
                     <div id="decision-banner" class="decision-banner" hidden>
                         <strong>Informasi dukungan keputusan</strong>
@@ -481,7 +534,7 @@
                         </span>
                         <small>Fitur ini bukan sistem peringatan dini resmi. Rujuk BMKG/BPBD untuk instruksi resmi.</small>
                     </div>
-                    <p class="legend-note">Ukuran titik proporsional terhadap risiko (P x Pop).</p>
+                    <p class="legend-note">Ukuran titik proporsional terhadap exposure (P x Pop).</p>
                     <div class="map-legend">
                         <div id="legend-categories" class="legend-categories"></div>
                         <div class="legend-gradient-block" id="legend-gradient-block">
@@ -520,7 +573,7 @@
     const DEFAULT_WARNING_THRESHOLD = 0.7;
 
     const COLOR_MODE_LABELS = {
-        risk: "Risiko (Probabilitas x Populasi BPS)",
+        risk: "Exposure (Probabilitas x Populasi BPS)",
         probability: "Probabilitas Kejadian",
         pop_exposed: "Populasi Terpapar (BPS)",
     };
@@ -532,22 +585,20 @@
     };
 
     const LEGEND_LABELS = {
-        risk: ["Risiko rendah", "Risiko tinggi"],
+        risk: ["Exposure rendah", "Exposure tinggi"],
         probability: ["Probabilitas rendah", "Probabilitas tinggi"],
         pop_exposed: ["Paparan kecil", "Paparan besar"],
     };
 
     const RISK_COLOR_SCALE = {
-        Ekstrem: "#991b1b",
-        "Sangat Tinggi": "#dc2626",
-        Tinggi: "#f97316",
-        Menengah: "#fbbf24",
-        Rendah: "#22c55e",
-        "Sangat Rendah": "#38bdf8",
+        Extreme: "#7f1d1d",
+        High: "#b91c1c",
+        Medium: "#f59e0b",
+        Low: "#10b981",
         default: "#94a3b8",
     };
 
-    const RISK_LEGEND_ORDER = ["Ekstrem", "Sangat Tinggi", "Tinggi", "Menengah", "Rendah", "Sangat Rendah"];
+    const RISK_LEGEND_ORDER = ["Extreme", "High", "Medium", "Low"];
     const MAX_POINTS = 100;
 
     const select = document.getElementById("model-select");
@@ -791,10 +842,91 @@
         return `${(Number(prob || 0) * 100).toFixed(1)}%`;
     }
 
+    const DECISION_SUPPORT_NOTE = "Decision Support System, not official early warning";
+    const DECISION_SUPPORT_LABEL = DECISION_SUPPORT_NOTE;
+
     function formatNumber(value) {
         const numeric = Number(value);
         if (!Number.isFinite(numeric)) return "-";
         return numeric.toLocaleString("id-ID");
+    }
+
+    function formatKilometer(value) {
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric)) return "-";
+        return `${numeric.toFixed(1)} km`;
+    }
+
+    function formatCauseExplanation(props) {
+        if (!props) return "-";
+        return props.cause_explanation || props.seismic_cause || "-";
+    }
+
+    function formatCauseSummary(props) {
+        if (!props) return "-";
+        const cause = props.seismic_cause || "Tidak diketahui";
+        const explanation = formatCauseExplanation(props);
+        return explanation ? `${cause} — ${explanation}` : cause;
+    }
+
+    function formatCauseDistances(props) {
+        if (!props) return "Jarak struktur tidak tersedia";
+        const segments = [];
+        if (Number.isFinite(Number(props.distance_to_subduction_km))) {
+            segments.push(`Subduksi ${formatKilometer(props.distance_to_subduction_km)}`);
+        }
+        if (Number.isFinite(Number(props.distance_to_fault_km))) {
+            segments.push(`Sesar ${formatKilometer(props.distance_to_fault_km)}`);
+        }
+        if (Number.isFinite(Number(props.distance_to_volcano_km))) {
+            segments.push(`Gunung api ${formatKilometer(props.distance_to_volcano_km)}`);
+        }
+        return segments.length ? segments.join(" | ") : "Jarak struktur tidak tersedia";
+    }
+
+    function formatMagnitude(value) {
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric) || numeric <= 0) {
+            return "-";
+        }
+        return `M ${numeric.toFixed(1)}`;
+    }
+
+    function formatAftershockSummary(props) {
+        if (!props) return "-";
+        const risk = props.aftershock_risk || "Low";
+        const magnitudeLabel = formatMagnitude(props.mainshock_magnitude);
+        return `${risk} (${magnitudeLabel})`;
+    }
+
+    function formatDecisionLabel(props) {
+        return props?.decision_support_note || props?.aftershock_decision_label || DECISION_SUPPORT_LABEL;
+    }
+
+    function formatExposure(value) {
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric)) return "-";
+        return formatNumber(Math.round(numeric));
+    }
+
+    function formatRecommendationsText(props) {
+        const recs = Array.isArray(props?.mitigation_recommendations)
+            ? props.mitigation_recommendations
+            : [];
+        if (!recs.length) {
+            return "Monitoring dan pemutakhiran informasi.";
+        }
+        return recs.join("; ");
+    }
+
+    function renderRecommendationList(props) {
+        const recs = Array.isArray(props?.mitigation_recommendations)
+            ? props.mitigation_recommendations
+            : [];
+        if (!recs.length) {
+            return `<div class="impact-placeholder">Rekomendasi tidak tersedia.</div>`;
+        }
+        return `<ul class="recommendation-list">${recs.map((item) => `<li>${item}</li>`).join("")}</ul>`;
     }
 
     function buildImpactBullets(props) {
@@ -802,10 +934,22 @@
             return ["Pilih titik pada peta untuk melihat ringkasan risiko."];
         }
         const probabilityText = `${formatPercent(props.probability)} (${describeProbability(props.probability)})`;
-        const riskValue = formatNumber(Math.round(props.risk || 0));
+        const exposureValue = formatExposure(props.exposure ?? props.risk);
         const popText = formatNumber(props.pop_exposed);
+        const causeSummary = formatCauseSummary(props);
+        const distanceSummary = formatCauseDistances(props);
+        const aftershockSummary = formatAftershockSummary(props);
+        const decisionLabel = formatDecisionLabel(props);
+        const aftershockExplanation = props.aftershock_explanation || "";
+        const recommendationsText = formatRecommendationsText(props);
+        const decisionNote = props?.decision_support_note || DECISION_SUPPORT_NOTE;
         return [
-            `Risiko keseluruhan ${props.risk_label || "-"} (~${riskValue} jiwa ekuivalen).`,
+            `${decisionNote}.`,
+            `Exposure ${props.risk_label || "-"} (~${exposureValue} jiwa ekuivalen).`,
+            `Rekomendasi mitigasi: ${recommendationsText}.`,
+            `Penyebab dominan: ${causeSummary}.`,
+            `Jarak struktur kunci: ${distanceSummary}.`,
+            `${decisionLabel}: Risiko aftershock ${aftershockSummary}. ${aftershockExplanation}`.trim(),
             `Probabilitas ${probabilityText} untuk minimal satu kejadian.`,
             `Populasi terpapar ~${popText} jiwa (BPS kab/kota).`,
         ];
@@ -852,7 +996,7 @@
         }
         const first = features[0]?.properties || {};
         mapMeta.textContent = `Tahun fitur ${first.year ?? "-"} | Tahun prediksi ${first.target_year ?? "-"} | Total grid ${features.length} | Mode warna: ${COLOR_MODE_LABELS[colorMode]}`;
-        pointCountLabel.textContent = `Menampilkan ${shownCount} titik risiko teratas (ambang >= ${formatNumber(Math.round(riskThresholdValueNumber))}).`;
+        pointCountLabel.textContent = `Menampilkan ${shownCount} titik exposure teratas (ambang >= ${formatNumber(Math.round(riskThresholdValueNumber))}).`;
     }
 
     function extractProps(feature) {
@@ -877,7 +1021,7 @@
         impactBody.innerHTML = `
             <div>
                 <p class="impact-region">${formatLocationName(props)}</p>
-                <p class="impact-subtitle">Grid ${props.grid_id || "-"} | Risiko ${props.risk_label || "-"}</p>
+                <p class="impact-subtitle">Grid ${props.grid_id || "-"} | Exposure ${props.risk_label || "-"}</p>
             </div>
             <div class="impact-grid">
                 <div class="impact-metric">
@@ -890,11 +1034,29 @@
                     <strong>${formatNumber(props.pop_exposed)}</strong>
                     <small>Sumber: BPS kab/kota</small>
                 </div>
-                    <div class="impact-metric">
-                        <span>Risiko (P x Pop)</span>
-                    <strong>${formatNumber(Math.round(props.risk || 0))}</strong>
+                <div class="impact-metric">
+                    <span>Exposure (P x Pop)</span>
+                    <strong>${formatExposure(props.exposure ?? props.risk)}</strong>
                     <small>${props.risk_label || "-"}</small>
                 </div>
+                <div class="impact-metric">
+                    <span>Penyebab dominan</span>
+                    <strong>${props.seismic_cause || "-"}</strong>
+                    <small>${formatCauseExplanation(props)}</small>
+                </div>
+                <div class="impact-metric">
+                    <span>Aftershock</span>
+                    <strong>${formatAftershockSummary(props)}</strong>
+                    <small>${formatDecisionLabel(props)}</small>
+                </div>
+            </div>
+            <div class="impact-recommendations">
+                <div class="impact-recommendations-header">
+                    <span>Mitigation Recommendations</span>
+                    <span class="recommendation-note">${formatDecisionLabel(props)}</span>
+                </div>
+                ${renderRecommendationList(props)}
+                <small class="recommendation-note">${props?.decision_support_note || DECISION_SUPPORT_NOTE}</small>
             </div>
             <ul class="impact-bullets">${bullets}</ul>
         `;
@@ -958,7 +1120,10 @@
         tooltipEl.innerHTML = `
             <strong>${formatLocationName(props)}</strong><br>
             Risiko: ${props.risk_label || "-"} | ${formatPercent(props.probability)}<br>
-            Populasi: ${formatNumber(props.pop_exposed)}
+            Populasi: ${formatNumber(props.pop_exposed)}<br>
+            Exposure: ${formatExposure(props.exposure ?? props.risk)}<br>
+            Penyebab: ${props.seismic_cause || "-"}<br>
+            Aftershock: ${formatAftershockSummary(props)}
         `;
         tooltipEl.classList.add("visible");
         tooltipOverlay.setPosition(coordinate);
@@ -1086,7 +1251,7 @@
             setSelectedFeature(gridSource.getFeatures()[0], { skipZoom: true });
         }
         if (!gridSource.getFeatures().length) {
-            resetPanel("Tidak ada grid yang memenuhi ambang risiko ini.");
+            resetPanel("Tidak ada grid yang memenuhi ambang exposure ini.");
         }
         updateMapSummary(currentFeaturesRaw, select.value, limited.length);
         updateLegend();

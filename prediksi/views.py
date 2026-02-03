@@ -11,8 +11,13 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_GET
 
+from .aftershock import AFTERSHOCK_ESTIMATOR
+from .monthly_aggregation import MonthlyAggregationError, aggregate_weekly_predictions
+from .seismic_cause import CAUSE_ANALYZER
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 PRED_PATH = BASE_DIR / "data" / "processed" / "grid_predictions.csv"
+WEEKLY_PRED_PATH = BASE_DIR / "data" / "processed" / "grid_weekly_predictions.csv"
 GRID_SIZE = 1.0
 
 WEST_JAVA_LAT_MIN = -7.8
@@ -40,17 +45,58 @@ MODEL_FIELDS = {
 FEATURE_COLS = ["event_count", "mean_mag", "max_mag", "mean_depth", "event_occur"]
 
 RISK_SCALE = [
-    (1_000_000, "Ekstrem"),
-    (500_000, "Sangat Tinggi"),
-    (200_000, "Tinggi"),
-    (50_000, "Menengah"),
-    (10_000, "Rendah"),
-    (0, "Sangat Rendah"),
+    (1_000_000, "Extreme"),
+    (300_000, "High"),
+    (100_000, "Medium"),
+    (0, "Low"),
 ]
+
+DECISION_SUPPORT_NOTE = "Decision Support System, not official early warning"
+
+MITIGATION_GUIDANCE = {
+    "Extreme": [
+        "Prepare emergency kit",
+        "Evacuation planning",
+        "Structural safety checks",
+        "Public alert dissemination",
+    ],
+    "High": [
+        "Community preparedness",
+        "Emergency logistics readiness",
+    ],
+    "Medium": [
+        "Awareness campaigns",
+    ],
+    "Low": [
+        "Monitoring and information update",
+    ],
+}
 
 _GRID_LOOKUP_CACHE: dict[str, dict[str, str]] | None = None
 _POP_LOOKUP_CACHE: dict[tuple[str, str], float] | None = None
 _ADMIN_FEATURES_CACHE: list[dict] | None = None
+
+
+def _get_mitigation_actions(level: str) -> list[str]:
+    return MITIGATION_GUIDANCE.get(level, MITIGATION_GUIDANCE["Low"])
+
+
+def _get_cause_properties(lat: float | None, lon: float | None) -> dict:
+    try:
+        lat_val = float(lat) if lat is not None else None
+        lon_val = float(lon) if lon is not None else None
+    except (TypeError, ValueError):
+        lat_val = None
+        lon_val = None
+    return CAUSE_ANALYZER.describe_properties(lat_val, lon_val)
+
+
+def _get_aftershock_properties(grid_id: str | None, magnitude: float | None = None) -> dict:
+    try:
+        mag_value = float(magnitude) if magnitude is not None else None
+    except (TypeError, ValueError):
+        mag_value = None
+    return AFTERSHOCK_ESTIMATOR.describe_properties(grid_id, mag_value)
 
 
 def _as_int(value):
@@ -518,12 +564,13 @@ def prediksi_geojson(request):
         if prov_norm and kab_norm:
             pop_value = pop_lookup.get((prov_norm, kab_norm), 0.0)
         probability = _clamp_probability(row[MODEL_FIELDS[model_key]])
-        risk = probability * pop_value
-        risk_label = _classify_risk(risk)
+        exposure = probability * pop_value
+        risk_label = _classify_risk(exposure)
+        mitigation = _get_mitigation_actions(risk_label)
         stats["probability"]["min"] = min(stats["probability"]["min"], probability)
         stats["probability"]["max"] = max(stats["probability"]["max"], probability)
-        stats["risk"]["min"] = min(stats["risk"]["min"], risk)
-        stats["risk"]["max"] = max(stats["risk"]["max"], risk)
+        stats["risk"]["min"] = min(stats["risk"]["min"], exposure)
+        stats["risk"]["max"] = max(stats["risk"]["max"], exposure)
         stats["pop_exposed"]["min"] = min(stats["pop_exposed"]["min"], pop_value)
         stats["pop_exposed"]["max"] = max(stats["pop_exposed"]["max"], pop_value)
         properties = {
@@ -538,13 +585,18 @@ def prediksi_geojson(request):
             "kab_kota": kab_kota,
             "probability": probability,
             "pop_exposed": int(round(pop_value)),
-            "risk": risk,
+            "exposure": exposure,
+            "risk": exposure,
             "risk_label": risk_label,
             "rf_prob": _clamp_probability(row["rf_prob"]),
             "svm_prob": _clamp_probability(row["svm_prob"]),
             "poisson_prob": _clamp_probability(row["poisson_prob"]),
             "probability_field": MODEL_FIELDS[model_key],
+            "mitigation_recommendations": mitigation,
+            "decision_support_note": DECISION_SUPPORT_NOTE,
         }
+        properties.update(_get_cause_properties(centroid_lat, centroid_lon))
+        properties.update(_get_aftershock_properties(grid_id))
         features.append(
             {
                 "type": "Feature",
@@ -613,15 +665,29 @@ def prediksi_points(request):
             status=404,
         )
 
+    grid_lookup = _load_grid_lookup()
+    pop_lookup = _get_population_lookup()
+
     features = []
     for _, row in df.iterrows():
         grid_lat = float(row["grid_lat"])
         grid_lon = float(row["grid_lon"])
         lat = grid_lat + 0.5
         lon = grid_lon + 0.5
+        grid_id = str(row["grid_id"])
+        location = grid_lookup.get(grid_id, {})
+        prov_norm = location.get("prov_norm") or ""
+        kab_norm = location.get("kab_norm") or ""
+        pop_value = 0.0
+        if prov_norm and kab_norm:
+            pop_value = pop_lookup.get((prov_norm, kab_norm), 0.0)
+        probability = _clamp_probability(row["rf_prob"])
+        exposure = probability * pop_value
+        risk_label = _classify_risk(exposure)
+        mitigation = _get_mitigation_actions(risk_label)
 
         props = {
-            "grid_id": str(row["grid_id"]),
+            "grid_id": grid_id,
             "grid_lat": grid_lat,
             "grid_lon": grid_lon,
             "year": int(row["year"]),
@@ -629,7 +695,19 @@ def prediksi_points(request):
             "rf_prob": float(row["rf_prob"]),
             "svm_prob": float(row["svm_prob"]),
             "poisson_prob": float(row["poisson_prob"]),
+            "probability": probability,
+            "pop_exposed": int(round(pop_value)),
+            "exposure": exposure,
+            "risk": exposure,
+            "risk_label": risk_label,
+            "mitigation_recommendations": mitigation,
+            "decision_support_note": DECISION_SUPPORT_NOTE,
         }
+        if location:
+            props["provinsi"] = location.get("provinsi")
+            props["kab_kota"] = location.get("kab_kota")
+        props.update(_get_cause_properties(lat, lon))
+        props.update(_get_aftershock_properties(props["grid_id"]))
 
         features.append(
             {
@@ -648,6 +726,149 @@ def prediksi_points(request):
                 "min_lat": requested_bbox[1],
                 "max_lon": requested_bbox[2],
                 "max_lat": requested_bbox[3],
+            },
+        }
+    )
+
+
+@require_GET
+def predict_monthly(request):
+    model_key = request.GET.get("model", "rf").lower()
+    if model_key not in MODEL_FIELDS:
+        model_key = "rf"
+
+    probability_field = MODEL_FIELDS[model_key]
+    source_path = WEEKLY_PRED_PATH if WEEKLY_PRED_PATH.exists() else PRED_PATH
+    if not source_path.exists():
+        return JsonResponse({"error": "Dataset prediksi mingguan tidak ditemukan."}, status=404)
+
+    df = pd.read_csv(source_path)
+    required_cols = {"grid_id", "grid_lat", "grid_lon", probability_field}
+    missing = [col for col in required_cols if col not in df.columns]
+    if missing:
+        return JsonResponse(
+            {"error": f"Kolom hilang di {source_path.name}: {', '.join(missing)}"},
+            status=500,
+        )
+
+    try:
+        requested_bbox = _get_requested_bbox(request)
+    except ValueError as exc:
+        return JsonResponse({"error": str(exc)}, status=400)
+
+    df = _filter_predictions_by_bbox(df, requested_bbox)
+    if df.empty:
+        return JsonResponse(
+            {"error": "Tidak ada data prediksi di dalam batas koordinat yang diminta."},
+            status=404,
+        )
+
+    try:
+        monthly_df = aggregate_weekly_predictions(df, probability_field, group_by=["grid_id"])
+    except MonthlyAggregationError as exc:
+        return JsonResponse({"error": str(exc)}, status=400)
+
+    if monthly_df.empty:
+        return JsonResponse(
+            {"error": "Data mingguan tidak memiliki informasi bulan yang valid."},
+            status=404,
+        )
+
+    grid_lookup = _load_grid_lookup()
+    if grid_lookup:
+        monthly_df["provinsi"] = monthly_df["grid_id"].map(lambda gid: grid_lookup.get(str(gid), {}).get("provinsi"))
+        monthly_df["kab_kota"] = monthly_df["grid_id"].map(lambda gid: grid_lookup.get(str(gid), {}).get("kab_kota"))
+        monthly_df["prov_norm"] = monthly_df["grid_id"].map(lambda gid: grid_lookup.get(str(gid), {}).get("prov_norm"))
+        monthly_df["kab_norm"] = monthly_df["grid_id"].map(lambda gid: grid_lookup.get(str(gid), {}).get("kab_norm"))
+    else:
+        monthly_df["prov_norm"] = pd.NA
+        monthly_df["kab_norm"] = pd.NA
+
+    pop_lookup = _get_population_lookup()
+
+    if "month_start" in monthly_df.columns:
+        monthly_df["month_start"] = pd.to_datetime(monthly_df["month_start"], errors="coerce")
+
+    results: list[dict] = []
+    for _, row in monthly_df.iterrows():
+        centroid_lat = row.get("centroid_lat")
+        centroid_lon = row.get("centroid_lon")
+        if pd.isna(centroid_lat):
+            base_lat = row.get("grid_lat")
+            centroid_lat = float(base_lat) + GRID_SIZE / 2.0 if pd.notna(base_lat) else None
+        if pd.isna(centroid_lon):
+            base_lon = row.get("grid_lon")
+            centroid_lon = float(base_lon) + GRID_SIZE / 2.0 if pd.notna(base_lon) else None
+        cause_props = _get_cause_properties(centroid_lat, centroid_lon)
+        prov_norm_val = row.get("prov_norm")
+        kab_norm_val = row.get("kab_norm")
+        pop_value = 0.0
+        if isinstance(prov_norm_val, str) and prov_norm_val and isinstance(kab_norm_val, str) and kab_norm_val:
+            pop_value = pop_lookup.get((prov_norm_val, kab_norm_val), 0.0)
+        probability_value = float(row.get("probability") or 0.0)
+        exposure = probability_value * pop_value
+        risk_label = _classify_risk(exposure)
+        mitigation = _get_mitigation_actions(risk_label)
+        entry = {
+            "grid_id": str(row.get("grid_id")),
+            "month": row.get("month_label") or "",
+            "probability": probability_value,
+            "risk_classification": risk_label,
+            "weekly_count": int(row.get("weekly_count") or 0),
+        }
+        year_value = row.get("year")
+        if pd.notna(year_value):
+            entry["year"] = int(year_value)
+        month_number = row.get("month_number")
+        if pd.notna(month_number):
+            entry["month_number"] = int(month_number)
+        grid_lat = row.get("grid_lat")
+        grid_lon = row.get("grid_lon")
+        if pd.notna(grid_lat):
+            entry["grid_lat"] = float(grid_lat)
+        if pd.notna(grid_lon):
+            entry["grid_lon"] = float(grid_lon)
+        if centroid_lat is not None:
+            entry["centroid_lat"] = float(centroid_lat)
+        if centroid_lon is not None:
+            entry["centroid_lon"] = float(centroid_lon)
+        if pd.notna(row.get("provinsi")):
+            entry["provinsi"] = row["provinsi"]
+        if pd.notna(row.get("kab_kota")):
+            entry["kab_kota"] = row["kab_kota"]
+        month_start = row.get("month_start")
+        if pd.notna(month_start):
+            try:
+                entry["month_start"] = pd.to_datetime(month_start).strftime("%Y-%m-%d")
+            except (TypeError, ValueError):
+                pass
+        entry["pop_exposed"] = int(round(pop_value))
+        entry["exposure"] = exposure
+        entry["risk"] = exposure
+        entry["mitigation_recommendations"] = mitigation
+        entry["decision_support_note"] = DECISION_SUPPORT_NOTE
+        entry["probability_field"] = probability_field
+        entry.update(cause_props)
+        entry.update(_get_aftershock_properties(entry["grid_id"]))
+        results.append(entry)
+
+    bounds_payload = {
+        "min_lon": requested_bbox[0],
+        "min_lat": requested_bbox[1],
+        "max_lon": requested_bbox[2],
+        "max_lat": requested_bbox[3],
+    }
+
+    return JsonResponse(
+        {
+            "model": model_key,
+            "probability_field": probability_field,
+            "source": source_path.name,
+            "results": results,
+            "meta": {
+                "grid_count": int(monthly_df["grid_id"].nunique()),
+                "month_count": int(monthly_df["month_label"].nunique()),
+                "bbox": bounds_payload,
             },
         }
     )

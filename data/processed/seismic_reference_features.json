@@ -1,0 +1,56 @@
+﻿{
+  "metadata": {
+    "description": "Simplified geologic reference points for West Java seismic analysis",
+    "coordinates": "latitude, longitude"
+  },
+  "subduction_zones": [
+    {
+      "name": "Sunda Megathrust",
+      "coordinates": [
+        [-10.0, 103.5],
+        [-9.8, 104.5],
+        [-9.6, 105.5],
+        [-9.4, 106.5],
+        [-9.2, 107.5],
+        [-9.1, 108.5],
+        [-9.0, 109.5],
+        [-8.9, 110.5]
+      ]
+    }
+  ],
+  "active_faults": [
+    {
+      "name": "Cimandiri Fault",
+      "coordinates": [
+        [-7.1, 106.5],
+        [-6.98, 106.8],
+        [-6.85, 107.1],
+        [-6.7, 107.4]
+      ]
+    },
+    {
+      "name": "Lembang Fault",
+      "coordinates": [
+        [-6.9, 107.4],
+        [-6.85, 107.6],
+        [-6.8, 107.8]
+      ]
+    },
+    {
+      "name": "Baribis Fault",
+      "coordinates": [
+        [-6.6, 107.0],
+        [-6.5, 107.5],
+        [-6.4, 108.0],
+        [-6.3, 108.5]
+      ]
+    }
+  ],
+  "volcanoes": [
+    {"name": "Tangkuban Perahu", "coordinates": [-6.77, 107.62]},
+    {"name": "Gede Pangrango", "coordinates": [-6.78, 106.98]},
+    {"name": "Papandayan", "coordinates": [-7.32, 107.72]},
+    {"name": "Ciremai", "coordinates": [-6.89, 108.4]},
+    {"name": "Galunggung", "coordinates": [-7.25, 108.05]}
+  ]
+}
