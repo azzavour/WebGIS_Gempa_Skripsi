@@ -6,4 +6,5 @@ urlpatterns = [
     path("api/prediksi/", views.prediksi_geojson, name="prediksi_geojson"),
     path("api/prediksi/points/", views.prediksi_points, name="prediksi_points"),
     path("api/predict-monthly/", views.predict_monthly, name="predict_monthly"),
+    path("api/prediksi/bulanan/", views.prediksi_bulanan, name="prediksi_bulanan"),
 ]

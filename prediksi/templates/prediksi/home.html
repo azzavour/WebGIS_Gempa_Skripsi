@@ -153,6 +153,31 @@
             font-size: 1.1rem;
         }
 
+        .info-card {
+            padding: var(--space-2);
+            border: 1px solid #e2e8f0;
+            border-radius: var(--radius-sm);
+            background: #f1f5f9;
+            color: #0f172a;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .card-title {
+            font-weight: 600;
+            font-size: 14px;
+            margin: 0;
+            color: #0f172a;
+        }
+
+        .card-value {
+            font-weight: 700;
+            font-size: 16px;
+            margin: 0;
+            color: #0f172a;
+        }
+
         .map-card {
             grid-area: map;
             padding: 0;
@@ -499,6 +524,10 @@
                     <h2 id="summary-title">Ringkasan Inti</h2>
                     <span class="badge" id="summary-risk-badge" aria-live="polite">-</span>
                 </div>
+                <div class="info-card" aria-label="Risiko bulanan">
+                    <div class="card-title">Risiko Per Bulan</div>
+                    <div class="card-value" id="monthly-highlight">Menunggu data bulanan...</div>
+                </div>
                 <div class="summary-grid">
                     <div class="summary-row">
                         <div>
@@ -682,6 +711,7 @@
         const summaryAftershock = document.getElementById("summary-aftershock");
         const summaryCause = document.getElementById("summary-cause");
         const mapMeta = document.getElementById("map-meta");
+        const monthlyHighlight = document.getElementById("monthly-highlight");
 
         const detailLocation = document.getElementById("detail-location");
         const detailRiskText = document.getElementById("detail-risk-text");
@@ -842,6 +872,7 @@
                 summaryPopulation.textContent = "-";
                 summaryAftershock.textContent = "-";
                 summaryCause.textContent = "-";
+                monthlyHighlight.textContent = "Menunggu data bulanan...";
                 return;
             }
 
@@ -906,6 +937,23 @@
                 `${formatNumber(props.pop_exposed)} warga diperkirakan terdampak jika skenario terjadi.`,
             ];
             meaningList.innerHTML = bullets.map((b) => `<li>${b}</li>`).join("");
+        }
+
+        function renderMonthlyHighlight(exposureList = [], monthlyEntries = []) {
+            if (!monthlyHighlight) return;
+            const data = exposureList.length ? exposureList : monthlyEntries;
+            if (!data || !data.length) {
+                monthlyHighlight.textContent = "Perkiraan bulan dengan kemungkinan lebih tinggi: -";
+                return;
+            }
+            const best =
+                monthlyEntries.reduce(
+                    (acc, cur) => (cur.prob || cur.probability_month || 0) > (acc?.prob || acc?.probability_month || 0) ? cur : acc,
+                    null
+                ) ||
+                exposureList.reduce((acc, cur) => (cur.exposure || 0) > (acc?.exposure || 0) ? cur : acc, null);
+            const name = best?.bulan || best?.month_name || "-";
+            monthlyHighlight.textContent = `Perkiraan bulan dengan kemungkinan lebih tinggi: ${name}`;
         }
 
         function updateMapMeta(metaOrFeatures, fallbackFeatures = []) {
@@ -1159,6 +1207,7 @@
                 refreshPoints();
                 map.updateSize();
                 showMessage("Data siap ditampilkan");
+                loadMonthlyOverview();
             } catch (err) {
                 console.error(err);
                 showMessage("Gagal memuat data");
@@ -1229,6 +1278,18 @@
             document.addEventListener("keydown", (evt) => {
                 if (evt.key === "Escape") closeAllModals();
             });
+        }
+
+        async function loadMonthlyOverview() {
+            try {
+                const res = await fetch(`/api/prediksi/bulanan/?model=${currentModel}`);
+                if (!res.ok) throw new Error(`Gagal memuat data bulanan (${res.status})`);
+                const data = await res.json();
+                renderMonthlyHighlight(data.exposure_monthly || [], data.monthly || []);
+            } catch (err) {
+                console.error(err);
+                renderMonthlyHighlight([], []);
+            }
         }
 
         document.addEventListener("DOMContentLoaded", () => {

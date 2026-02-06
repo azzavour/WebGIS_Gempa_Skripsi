@@ -41,6 +41,21 @@ MODEL_FIELDS = {
     "poisson": "poisson_prob",
 }
 
+MONTH_NAMES = [
+    "Januari",
+    "Februari",
+    "Maret",
+    "April",
+    "Mei",
+    "Juni",
+    "Juli",
+    "Agustus",
+    "September",
+    "Oktober",
+    "November",
+    "Desember",
+]
+
 # kolom fitur yang dipakai (sama seperti di train_models.py)
 FEATURE_COLS = ["event_count", "mean_mag", "max_mag", "mean_depth", "event_occur"]
 
@@ -494,6 +509,24 @@ def _classify_risk(value: float) -> str:
     return "Tidak Diketahui"
 
 
+def _monthly_probability_from_yearly(prob_year: float) -> float:
+    try:
+        py = float(prob_year)
+    except (TypeError, ValueError):
+        return 0.0
+    py = max(0.0, min(1.0, py))
+    return 1 - (1 - py) ** (1 / 12)
+
+
+def _classify_probability(prob: float) -> str:
+    pct = prob * 100
+    if pct < 30:
+        return "Rendah"
+    if pct <= 60:
+        return "Sedang"
+    return "Tinggi"
+
+
 @require_GET
 def prediksi_geojson(request):
     model_key = request.GET.get("model", "rf").lower()
@@ -873,6 +906,146 @@ def predict_monthly(request):
         }
     )
 
+
+@require_GET
+def prediksi_bulanan(request):
+    """
+    Disagregasi probabilitas tahunan menjadi bulanan (tanpa retraining).
+    Rumus: P_bulan = 1 - (1 - P_tahun) ** (1/12)
+    """
+    model_key = request.GET.get("model", "rf").lower()
+    if model_key not in MODEL_FIELDS:
+        model_key = "rf"
+
+    probability_field = MODEL_FIELDS[model_key]
+    if not PRED_PATH.exists():
+        return JsonResponse({"error": "grid_predictions.csv tidak ditemukan."}, status=404)
+
+    try:
+        requested_bbox = _get_requested_bbox(request)
+    except ValueError as exc:
+        return JsonResponse({"error": str(exc)}, status=400)
+
+    df = pd.read_csv(PRED_PATH)
+    required_cols = {"grid_id", "grid_lat", "grid_lon", probability_field, "year", "target_year"}
+    missing = [col for col in required_cols if col not in df.columns]
+    if missing:
+        return JsonResponse({"error": f"Kolom hilang: {', '.join(missing)}"}, status=500)
+
+    df = _filter_predictions_by_bbox(df, requested_bbox)
+    if df.empty:
+        return JsonResponse({"error": "Tidak ada data dalam batas koordinat diminta."}, status=404)
+
+    grid_lookup = _load_grid_lookup()
+    pop_lookup = _get_population_lookup()
+
+    monthly_records: list[dict] = []
+    exposure_by_month = [0.0 for _ in range(12)]
+    prob_sum_by_month = [0.0 for _ in range(12)]
+    prob_count_by_month = [0 for _ in range(12)]
+    peak_month_global = None
+    peak_prob_global = -1.0
+
+    target_year_val = int(df["target_year"].dropna().max()) if "target_year" in df else None
+    seasonal_weights = {
+        1: 1.2,
+        2: 1.2,
+        3: 1.2,
+        4: 1.0,
+        5: 1.0,
+        6: 1.0,
+        7: 0.9,
+        8: 0.9,
+        9: 0.9,
+        10: 1.1,
+        11: 1.2,
+        12: 1.2,
+    }
+
+    for _, row in df.iterrows():
+        grid_id = str(row.get("grid_id"))
+        prob_year = _clamp_probability(row.get(probability_field))
+        prob_month = _monthly_probability_from_yearly(prob_year)
+
+        prov_norm = kab_norm = prov_label = kab_label = None
+        if grid_lookup:
+            meta = grid_lookup.get(str(grid_id), {})
+            prov_label = meta.get("provinsi")
+            kab_label = meta.get("kab_kota")
+            prov_norm = meta.get("prov_norm")
+            kab_norm = meta.get("kab_norm")
+
+        pop_val = 0.0
+        if prov_norm and kab_norm:
+            pop_val = pop_lookup.get((prov_norm, kab_norm), 0.0)
+
+        base_lat = row.get("grid_lat")
+        base_lon = row.get("grid_lon")
+        centroid_lat = float(base_lat) + GRID_SIZE / 2.0 if pd.notna(base_lat) else None
+        centroid_lon = float(base_lon) + GRID_SIZE / 2.0 if pd.notna(base_lon) else None
+        cause_props = _get_cause_properties(centroid_lat, centroid_lon)
+
+        for month_idx, month_name in enumerate(MONTH_NAMES, start=1):
+            seasonal = seasonal_weights.get(month_idx, 1.0)
+            prob_month_weighted = max(0.0, min(1.0, prob_month * seasonal))
+            exposure = prob_month_weighted * pop_val
+            exposure_by_month[month_idx - 1] += exposure
+            prob_sum_by_month[month_idx - 1] += prob_month_weighted
+            prob_count_by_month[month_idx - 1] += 1
+            risk_class = _classify_probability(prob_month_weighted)
+            entry = {
+                "grid_id": grid_id,
+                "month_number": month_idx,
+                "month_name": month_name,
+                "probability_month": prob_month_weighted,
+                "probability_year": prob_year,
+                "risk_class": risk_class,
+                "pop_exposed": int(round(pop_val)),
+                "exposure": exposure,
+                "year": int(row.get("year")) if pd.notna(row.get("year")) else None,
+                "target_year": int(row.get("target_year")) if pd.notna(row.get("target_year")) else None,
+            }
+            if prov_label:
+                entry["provinsi"] = prov_label
+            if kab_label:
+                entry["kab_kota"] = kab_label
+            if base_lat is not None:
+                entry["grid_lat"] = float(base_lat)
+            if base_lon is not None:
+                entry["grid_lon"] = float(base_lon)
+            if centroid_lat is not None:
+                entry["centroid_lat"] = float(centroid_lat)
+            if centroid_lon is not None:
+                entry["centroid_lon"] = float(centroid_lon)
+            entry.update(cause_props)
+            entry.update(_get_aftershock_properties(grid_id))
+            monthly_records.append(entry)
+
+            if prob_month_weighted > peak_prob_global:
+                peak_prob_global = prob_month_weighted
+                peak_month_global = month_name
+
+    exposure_monthly = [
+        {"month_name": MONTH_NAMES[i], "exposure": exposure_by_month[i]} for i in range(12)
+    ]
+
+    monthly_probs = []
+    for i in range(12):
+        avg_prob = 0.0
+        if prob_count_by_month[i]:
+            avg_prob = prob_sum_by_month[i] / prob_count_by_month[i]
+        monthly_probs.append({"bulan": MONTH_NAMES[i], "prob": avg_prob})
+
+    response_payload = {
+        "region": "Jawa Barat",
+        "year": target_year_val or 2026,
+        "monthly": monthly_probs,
+        "peak_month": peak_month_global,
+        "exposure_monthly": exposure_monthly,
+        "results": monthly_records,
+    }
+
+    return JsonResponse(response_payload)
 
 def main():
     print("Baca data grid tahunan dari:", GRID_PATH)
