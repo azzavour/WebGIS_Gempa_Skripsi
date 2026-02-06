@@ -4,462 +4,475 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dasbor Prediksi Gempa Bumi Interaktif</title>
+    <title>Dasbor Risiko Gempa Jawa Barat</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v9.2.4/ol.css">
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700&display=swap');
+
         :root {
             color-scheme: light;
-            font-family: "Segoe UI", "Inter", system-ui, -apple-system, sans-serif;
+            --bg: #f5f7fb;
+            --surface: #ffffff;
+            --surface-soft: #eef2f6;
+            --text: #0f172a;
+            --muted: #475569;
+            --muted-soft: #94a3b8;
+            --border: #e2e8f0;
+            --shadow: 0 16px 32px rgba(15, 23, 42, 0.12);
+            --space-1: 8px;
+            --space-2: 16px;
+            --space-3: 24px;
+            --space-4: 32px;
+            --radius: 16px;
+            --radius-sm: 12px;
+            --risk-high: #ef4444;
+            --risk-medium: #f59e0b;
+            --risk-low: #22c55e;
         }
 
-        * {
-            box-sizing: border-box;
-        }
+        * { box-sizing: border-box; }
 
         body {
             margin: 0;
-            background: #eef2f7;
-            color: #0f172a;
-            font-family: inherit;
+            background: var(--bg);
+            color: var(--text);
+            font-family: "Manrope", "Segoe UI", system-ui, -apple-system, sans-serif;
+            line-height: 1.5;
         }
 
         .page-shell {
-            max-width: 1280px;
+            max-width: 1480px;
             margin: 0 auto;
-            padding: 32px 20px 56px;
+            padding: var(--space-3) var(--space-3) var(--space-4);
             display: flex;
             flex-direction: column;
-            gap: 24px;
+            gap: var(--space-2);
         }
 
-        .page-header {
+        header.page-header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            gap: 16px;
+            gap: var(--space-2);
             flex-wrap: wrap;
         }
 
-        .header-left {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
+        .eyebrow {
+            margin: 0 0 var(--space-1);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--muted);
+            font-size: 0.85rem;
+            font-weight: 700;
         }
 
-        .header-title {
+
+        h1 {
             margin: 0;
-            font-size: clamp(1.6rem, 4vw, 2.2rem);
-            font-weight: 700;
+            font-size: clamp(1.6rem, 3vw, 2.4rem);
         }
 
         .header-meta {
             display: flex;
-            gap: 10px;
+            gap: var(--space-1);
             flex-wrap: wrap;
+            color: var(--muted);
             font-size: 0.95rem;
-            color: #475569;
         }
 
-        .header-meta .meta-divider {
-            color: #94a3b8;
-        }
-
-        .map-toolbar {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 18px;
-            align-items: flex-end;
-        }
-
-        .map-controls {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            min-width: 200px;
-        }
-
-        .map-controls label,
-        .map-controls .controls-label {
-            font-size: 0.78rem;
-            text-transform: uppercase;
-            letter-spacing: 0.6px;
-            color: #475569;
-        }
-
-        #model-select {
-            padding: 10px 14px;
-            border-radius: 12px;
-            border: 1px solid #cbd5f5;
-            font-size: 0.95rem;
-            background: #fff;
-            color: #0f172a;
-            min-width: 220px;
-            box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
-        }
-
-        .slider-row {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        #risk-threshold {
-            width: 170px;
-        }
-
-        #risk-threshold-value {
-            font-size: 0.85rem;
-            color: #1d4ed8;
-            font-weight: 600;
-        }
-
-        .map-controls small {
-            color: #94a3b8;
-            font-size: 0.78rem;
-        }
-
-        #warning-threshold {
-            padding: 10px 14px;
-            border-radius: 12px;
-            border: 1px solid #cbd5f5;
-            font-size: 0.95rem;
-            background: #fff;
-            color: #0f172a;
-        }
-
-        .dashboard {
+        .layout {
             display: grid;
-            grid-template-columns: minmax(0, 72%) minmax(280px, 28%);
-            gap: 24px;
-            align-items: stretch;
-        }
-
-        .decision-banner {
-            border-radius: 14px;
-            border: 1px solid #f97316;
-            background: rgba(249, 115, 22, 0.08);
-            color: #7c2d12;
-            padding: 14px 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-
-        .decision-banner strong {
-            font-size: 0.95rem;
-        }
-
-        .decision-banner small {
-            color: #9a3412;
-            font-size: 0.78rem;
-        }
-
-        .decision-note,
-        .decision-note-inline {
-            font-size: 0.85rem;
-            color: #b45309;
-            font-weight: 600;
-        }
-
-        .decision-note {
-            margin: 0;
-        }
-
-        .decision-note-inline {
-            display: inline-block;
+            grid-template-areas: "summary map actions";
+            grid-template-columns: minmax(260px, 15%) minmax(0, 70%) minmax(260px, 15%);
+            gap: var(--space-2);
+            align-items: start;
         }
 
         .card {
-            background: #ffffff;
-            border-radius: 20px;
-            padding: 24px;
-            box-shadow: 0 25px 45px rgba(15, 23, 42, 0.08);
-            border: 1px solid #edf1f7;
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: var(--space-3);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+
+        .card h2,
+        .card h3,
+        .card h4 {
+            margin: 0 0 var(--space-1);
+            font-weight: 700;
+        }
+
+        .meta-label {
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+
+        .summary-card {
+            grid-area: summary;
             display: flex;
             flex-direction: column;
-            gap: 18px;
+            gap: var(--space-2);
         }
 
-        .card-header {
+        .summary-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            gap: 12px;
+            gap: var(--space-1);
         }
 
-        .card-header h2,
-        .card-header h3 {
-            margin: 0;
-            font-size: 1.2rem;
-        }
-
-        .model-pill {
-            padding: 6px 12px;
-            border-radius: 999px;
-            background: #eef2ff;
-            color: #1d4ed8;
-            font-size: 0.85rem;
-            font-weight: 600;
-        }
-
-        .map-card #map {
-            width: 100%;
-            min-height: 75vh;
-            height: 75vh;
-            border-radius: 18px;
-            border: 1px solid #dbe0e8;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .mode-toggle {
+        .badge {
             display: inline-flex;
-            border-radius: 12px;
-            border: 1px solid #d0d7e4;
-            background: #f8fafc;
-            padding: 4px;
-            gap: 4px;
-        }
-
-        .mode-button {
-            border: none;
-            background: transparent;
-            color: #475569;
-            padding: 6px 12px;
-            border-radius: 9px;
-            font-size: 0.85rem;
-            cursor: pointer;
-            transition: all 0.15s ease;
-        }
-
-        .mode-button.active {
-            background: #1d4ed8;
+            align-items: center;
+            gap: var(--space-1);
+            padding: var(--space-1) var(--space-2);
+            border-radius: 999px;
+            font-weight: 700;
             color: #fff;
-            box-shadow: 0 6px 14px rgba(29, 78, 216, 0.25);
+            font-size: 0.95rem;
         }
 
-        .map-legend {
+        .summary-grid {
+            display: grid;
+            gap: var(--space-1);
+        }
+
+        .summary-row {
             display: flex;
-            flex-wrap: wrap;
             align-items: flex-start;
-            gap: 16px;
-            font-size: 0.9rem;
-            color: #475569;
+            justify-content: space-between;
+            gap: var(--space-2);
+            padding: var(--space-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--surface-soft);
         }
 
-        .map-summary {
+        .summary-row strong {
+            font-size: 1.1rem;
+        }
+
+        .map-card {
+            grid-area: map;
+            padding: 0;
+            position: relative;
+            overflow: visible;
+            border: 1px solid var(--border);
+        }
+
+        #map {
+            width: 100%;
+            height: 72vh;
+            min-height: 460px;
+            border-radius: var(--radius);
+            overflow: visible;
+            display: block;
+        }
+
+        .map-topbar {
+            position: absolute;
+            inset: var(--space-2) var(--space-2) auto var(--space-2);
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            gap: 8px;
+            gap: var(--space-1);
             flex-wrap: wrap;
-            margin-top: 16px;
+            z-index: 10;
+            pointer-events: none;
         }
 
-        .map-meta-text {
-            margin: 0;
-            font-weight: 600;
-            color: #0f172a;
+        .map-topbar > * {
+            pointer-events: auto;
         }
 
-        #point-count-label {
-            font-size: 0.85rem;
-            color: #475569;
-        }
-
-        .legend-note {
-            margin: 4px 0 0;
-            font-size: 0.8rem;
-            color: #64748b;
-        }
-
-        .legend-categories {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            flex: 1 1 220px;
-        }
-
-        .legend-badge {
+        .pill {
+            background: rgba(255, 255, 255, 0.92);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            padding: var(--space-2) var(--space-3);
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            padding: 6px 12px;
-            border-radius: 999px;
-            border: 1px solid #e2e8f0;
-            background: #f8fafc;
-            font-size: 0.82rem;
-            color: #0f172a;
+            gap: var(--space-1);
+            box-shadow: var(--shadow);
+        }
+
+        .legend {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-2);
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95rem;
         }
 
         .legend-dot {
-            width: 10px;
-            height: 10px;
+            width: 16px;
+            height: 16px;
             border-radius: 50%;
-            display: inline-block;
-        }
-
-        .legend-gradient-block {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex: 1 1 220px;
-        }
-
-        .legend-gradient {
-            flex: 1;
-            height: 12px;
-            border-radius: 999px;
-            border: 1px solid #dbe0e8;
+            border: 1px solid rgba(15, 23, 42, 0.1);
         }
 
         .map-tooltip {
-            position: absolute;
-            pointer-events: none;
-            background: rgba(15, 23, 42, 0.9);
+            background: rgba(17, 24, 39, 0.92);
             color: #fff;
-            padding: 6px 10px;
-            border-radius: 8px;
-            font-size: 0.8rem;
-            box-shadow: 0 8px 16px rgba(15, 23, 42, 0.3);
-            transform: translate(-50%, -120%);
-            transition: opacity 0.15s ease;
-            opacity: 0;
+            padding: var(--space-2);
+            border-radius: var(--radius-sm);
+            font-size: 0.95rem;
+            box-shadow: var(--shadow);
+            min-width: 220px;
+            max-width: 280px;
         }
 
-        .map-tooltip.visible {
-            opacity: 1;
-        }
-
-        .impact-card {
+        .map-tooltip .tooltip-row {
             display: flex;
-            flex-direction: column;
-            gap: 16px;
+            justify-content: space-between;
+            gap: var(--space-1);
         }
 
-        .impact-body {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
+        .map-tooltip .tooltip-label {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
         }
 
-        .impact-region {
-            margin: 0;
-            font-size: 1.05rem;
-            font-weight: 600;
-            color: #0f172a;
-        }
-
-        .impact-subtitle {
-            margin: 0;
-            font-size: 0.85rem;
-            color: #64748b;
-        }
-
-        .impact-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 12px;
-        }
-
-        .impact-metric {
-            border: 1px dashed #e2e8f0;
+        .map-tooltip button {
+            margin-top: var(--space-1);
+            width: 100%;
+            background: #0f172a;
+            color: #fff;
+            border: none;
             border-radius: 12px;
-            padding: 12px;
+            padding: var(--space-2);
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.95rem;
+            min-height: 44px;
+        }
+
+        .detail-sheet {
+            padding: var(--space-3);
+            border-top: 1px solid var(--border);
+            background: var(--surface);
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-2);
+        }
+
+        .detail-heading {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: var(--space-2);
+            flex-wrap: wrap;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: var(--space-2);
+        }
+
+        .detail-box {
+            padding: var(--space-2);
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            background: var(--surface-soft);
+            min-height: 96px;
             display: flex;
             flex-direction: column;
             gap: 6px;
-            background: #f8fafc;
         }
 
-        .impact-metric span:first-child {
-            font-size: 0.78rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #64748b;
+        .action-card {
+            grid-area: actions;
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-2);
         }
 
-        .impact-metric strong {
-            font-size: 1.1rem;
-            color: #0f172a;
-        }
-
-        .impact-metric small {
-            font-size: 0.75rem;
-            color: #94a3b8;
-        }
-
-        .impact-bullets {
+        .bullet-list {
             margin: 0;
-            padding-left: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            color: #475569;
-            font-size: 0.9rem;
+            padding-left: 18px;
+            color: var(--text);
+            display: grid;
+            gap: 6px;
         }
 
-        .impact-bullets li::marker {
-            color: #1d4ed8;
+        .info-note {
+            padding: var(--space-2);
+            border-radius: var(--radius-sm);
+            background: var(--surface-soft);
+            border: 1px solid var(--border);
+            color: var(--muted);
         }
 
-        .impact-recommendations {
-            margin-top: 14px;
-            border-radius: 14px;
-            border: 1px dashed #fcd34d;
-            background: #fffbeb;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .impact-recommendations-header {
-            display: flex;
-            justify-content: space-between;
+        .cta-button {
+            display: inline-flex;
             align-items: center;
-            font-size: 0.78rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #b45309;
+            justify-content: center;
+            gap: var(--space-1);
+            width: 100%;
+            background: #0f172a;
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            padding: var(--space-2);
+            font-weight: 700;
+            cursor: pointer;
+            min-height: 44px;
         }
 
-        .recommendation-list {
-            margin: 0;
-            padding-left: 20px;
+        .ghost-button {
+            background: transparent;
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: var(--space-1) var(--space-2);
+            font-weight: 600;
+            cursor: pointer;
+            min-height: 44px;
+        }
+
+        .story-card {
+            padding: var(--space-2);
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            background: #fff5f5;
+            color: #7f1d1d;
+        }
+
+        .modal {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+        }
+
+        .modal.is-open {
+            display: flex;
+        }
+
+        .modal__backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.45);
+        }
+
+        .modal__dialog {
+            position: relative;
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: var(--space-3);
+            width: min(720px, 92vw);
+            max-height: 84vh;
+            overflow: auto;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
             display: flex;
             flex-direction: column;
-            gap: 4px;
-            color: #7c2d12;
-            font-size: 0.9rem;
+            gap: var(--space-2);
         }
 
-        .recommendation-note {
-            font-size: 0.75rem;
-            color: #b45309;
+        .modal-cause-text h4 {
+            margin: 0 0 6px;
         }
 
-        .impact-placeholder {
-            padding: 18px;
-            border-radius: 14px;
-            background: #f8fafc;
-            border: 1px dashed #cbd5f5;
-            color: #475569;
-            text-align: center;
+        .modal-cause-text p {
+            margin: 0 0 var(--space-2);
+            color: var(--muted);
         }
 
-        @media (max-width: 960px) {
-            .dashboard {
+        .modal__close {
+            position: absolute;
+            top: var(--space-2);
+            right: var(--space-2);
+            background: transparent;
+            border: none;
+            font-size: 1.3rem;
+            cursor: pointer;
+            color: var(--muted);
+        }
+
+        .modal-grid {
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        }
+
+        .checklist {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: grid;
+            gap: var(--space-2);
+        }
+
+        .checklist li {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: var(--space-1);
+            align-items: start;
+            padding: var(--space-2);
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            background: var(--surface-soft);
+        }
+
+        .icon-step {
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
+            background: #0f172a;
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+        }
+
+        .map-meta {
+            font-size: 0.95rem;
+            color: var(--muted);
+        }
+
+        body.modal-open {
+            overflow: hidden;
+        }
+
+        @media (max-width: 1180px) {
+            .layout {
+                grid-template-areas:
+                    "map"
+                    "summary"
+                    "actions";
                 grid-template-columns: 1fr;
             }
-
-            #model-select {
-                width: 100%;
-            }
-
-            .map-card #map {
-                min-height: 60vh;
+            #map {
                 height: 60vh;
+                min-height: 380px;
+            }
+            .page-shell {
+                padding: var(--space-2) var(--space-2) var(--space-3);
+            }
+        }
+
+        @media (max-width: 720px) {
+            .detail-grid {
+                grid-template-columns: 1fr;
+            }
+            .map-tooltip {
+                width: min(90vw, 360px);
+                font-size: 1rem;
+            }
+            .map-topbar {
+                gap: var(--space-1);
+            }
+            h1 {
+                font-size: clamp(1.4rem, 5vw, 2rem);
             }
         }
     </style>
@@ -467,901 +480,762 @@
 <body>
     <div class="page-shell">
         <header class="page-header">
-            <div class="header-left">
-                <h1 class="header-title">Peta Prediksi Risiko Gempa</h1>
+            <div>
+                <p class="eyebrow">Dasbor Risiko Gempa</p>
+                <h1>Risiko Gempa Jawa Barat</h1>
                 <div class="header-meta">
-                    <span id="header-target-year">Tahun prediksi: -</span>
-                    <span class="meta-divider">•</span>
-                    <span id="header-updated">Update: -</span>
-                    <span class="meta-divider">•</span>
-                    <span>Wilayah: Provinsi Jawa Barat (106.3-108.9 BT / -7.8--5.9 LS)</span>
+                    <span id="header-target-year">Prediksi tahun: -</span>
+                    <span aria-hidden="true">|</span>
+                    <span id="header-updated">Pembaruan: -</span>
+                    <span aria-hidden="true">|</span>
+                    <span>Wilayah: Provinsi Jawa Barat</span>
                 </div>
-                <p class="decision-note">Decision Support System, not official early warning.</p>
             </div>
         </header>
 
-        <main class="dashboard">
-            <section class="main-column">
-                <div class="card map-card">
-                    <div class="card-header">
+        <main class="layout" aria-label="Tata letak utama">
+            <aside class="card summary-card" aria-labelledby="summary-title">
+                <div class="summary-header">
+                    <h2 id="summary-title">Ringkasan Inti</h2>
+                    <span class="badge" id="summary-risk-badge" aria-live="polite">-</span>
+                </div>
+                <div class="summary-grid">
+                    <div class="summary-row">
                         <div>
-                            <h2>Peta Sebaran Prediksi</h2>
-                        </div>
-                        <span class="model-pill" id="map-model-label">-</span>
-                    </div>
-                    <div class="map-toolbar">
-                        <div class="map-controls">
-                            <label for="model-select">Model Prediksi</label>
-                            <select id="model-select">
-                                <option value="rf">Random Forest</option>
-                                <option value="svm">SVM</option>
-                                <option value="poisson">Poisson</option>
-                            </select>
-                        </div>
-                        <div class="map-controls">
-                            <span class="controls-label">Mode warna</span>
-                            <div class="mode-toggle" id="color-mode-toolbar">
-                                <button class="mode-button active" data-color-mode="risk">Risiko</button>
-                                <button class="mode-button" data-color-mode="probability">Probabilitas</button>
-                                <button class="mode-button" data-color-mode="pop_exposed">Populasi</button>
-                            </div>
-                        </div>
-                        <div class="map-controls">
-                            <label for="risk-threshold">Ambang Exposure (P x Pop)</label>
-                            <div class="slider-row">
-                                <input type="range" id="risk-threshold" min="0" max="1" value="0" step="1">
-                                <span id="risk-threshold-value">≥ 0</span>
-                            </div>
-                        </div>
-                        <div class="map-controls">
-                            <label for="warning-threshold">Notifikasi probabilitas</label>
-                            <input type="number" id="warning-threshold" min="0" max="1" step="0.05" value="0.7">
-                            <small>Digunakan sebagai ambang informasi dukungan keputusan (bukan peringatan resmi)</small>
+                            <div class="meta-label">Tingkat Risiko</div>
+                            <strong id="summary-risk-label">-</strong>
                         </div>
                     </div>
-                    <div id="map">
-                        <div id="map-tooltip" class="map-tooltip"></div>
+                    <div class="summary-row">
+                        <div>
+                            <div class="meta-label">Perkiraan Warga Terdampak</div>
+                            <strong id="summary-population">-</strong>
+                        </div>
                     </div>
-                    <div class="map-summary">
-                        <p id="map-meta" class="map-meta-text">Menunggu data prediksi...</p>
-                        <span id="point-count-label">Menampilkan 0 titik</span>
-                        <span class="decision-note-inline">Decision Support System, not official early warning.</span>
+                    <div class="summary-row">
+                        <div>
+                            <div class="meta-label">Potensi Gempa Susulan</div>
+                            <strong id="summary-aftershock">-</strong>
+                        </div>
                     </div>
-                    <div id="decision-banner" class="decision-banner" hidden>
-                        <strong>Informasi dukungan keputusan</strong>
-                        <span id="decision-banner-text">
-                            Sistem akan menampilkan notifikasi jika probabilitas model melampaui ambang yang ditentukan.
-                        </span>
-                        <small>Fitur ini bukan sistem peringatan dini resmi. Rujuk BMKG/BPBD untuk instruksi resmi.</small>
+                    <div class="summary-row">
+                        <div>
+                            <div class="meta-label">Penyebab Dominan</div>
+                            <strong id="summary-cause">-</strong>
+                        </div>
                     </div>
-                    <p class="legend-note">Ukuran titik proporsional terhadap exposure (P x Pop).</p>
-                    <div class="map-legend">
-                        <div id="legend-categories" class="legend-categories"></div>
-                        <div class="legend-gradient-block" id="legend-gradient-block">
-                            <span id="legend-low-label">Nilai rendah</span>
-                            <span class="legend-gradient" id="legend-gradient"></span>
-                            <span id="legend-high-label">Nilai tinggi</span>
+                </div>
+                <button class="ghost-button" type="button" id="cause-open-btn" disabled>Pelajari Penyebab</button>
+            </aside>
+
+            <section class="card map-card" aria-label="Peta risiko">
+                <div class="map-topbar">
+                    <div class="pill legend" aria-label="Legenda risiko">
+                        <span class="legend-item"><span class="legend-dot" style="background: var(--risk-high);"></span>Risiko Tinggi</span>
+                        <span class="legend-item"><span class="legend-dot" style="background: var(--risk-medium);"></span>Risiko Sedang</span>
+                        <span class="legend-item"><span class="legend-dot" style="background: var(--risk-low);"></span>Risiko Rendah</span>
+                    </div>
+                    <div class="pill map-meta" id="map-meta">Menunggu data...</div>
+                </div>
+                <div id="map" role="presentation">
+                    <div id="map-tooltip" class="map-tooltip" aria-live="polite" style="display:none;"></div>
+                </div>
+                <div class="detail-sheet" aria-live="polite">
+                    <div class="detail-heading">
+                        <div>
+                            <h3 id="detail-location" style="margin:0;">Pilih titik pada peta</h3>
+                            <div class="meta-label" id="detail-risk-text">-</div>
+                        </div>
+                        <button class="ghost-button" type="button" id="detail-open-modal" aria-label="Buka ringkasan detail" disabled>Lihat detail</button>
+                    </div>
+                    <div class="detail-grid">
+                        <div class="detail-box">
+                            <div class="meta-label">Tingkat Risiko</div>
+                            <strong id="detail-risk-value">-</strong>
+                        </div>
+                        <div class="detail-box">
+                            <div class="meta-label">Perkiraan Warga Terdampak</div>
+                            <strong id="detail-population-value">-</strong>
+                        </div>
+                        <div class="detail-box">
+                            <div class="meta-label">Potensi Gempa Susulan</div>
+                            <strong id="detail-aftershock-value">-</strong>
+                        </div>
+                        <div class="detail-box">
+                            <div class="meta-label">Penyebab Dominan</div>
+                            <strong id="detail-cause-value">-</strong>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <aside class="side-column">
-                <div class="card impact-card">
-                    <div class="card-header">
-                        <h3>Detail Dampak Daerah</h3>
-                        <span class="model-pill" id="impact-model-label">-</span>
-                    </div>
-                    <div class="impact-body" id="impact-body">
-                        <div class="impact-placeholder">Pilih titik pada peta untuk melihat rincian risiko.</div>
-                    </div>
+            <aside class="card action-card" aria-label="Panduan tindakan">
+                <h3 id="action-title">Informasi untuk Warga</h3>
+                <ul class="bullet-list" id="meaning-list"></ul>
+
+                <button class="cta-button" type="button" id="guide-open-btn">Panduan Kesiapsiagaan</button>
+
+                <div class="info-note">
+                    <strong>Catatan</strong><br>
+                    Sistem pendukung keputusan; ikuti info resmi BMKG/BPBD.
                 </div>
             </aside>
         </main>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/ol@v9.2.4/dist/ol.js"></script>
-    
-<script>
-    const MODEL_FIELDS = {
-        rf: { label: "Random Forest", field: "rf_prob" },
-        svm: { label: "SVM", field: "svm_prob" },
-        poisson: { label: "Poisson", field: "poisson_prob" },
-    };
+    <div class="modal" id="detail-modal" role="dialog" aria-modal="true" aria-labelledby="detail-modal-title">
+        <div class="modal__backdrop" data-close-modal></div>
+        <div class="modal__dialog">
+            <button class="modal__close" type="button" aria-label="Tutup" data-close-modal>&times;</button>
+            <h3 id="detail-modal-title">Ringkasan Wilayah</h3>
+            <div class="meta-label" id="detail-modal-location">-</div>
+            <div class="detail-grid modal-grid">
+                <div class="detail-box">
+                    <div class="meta-label">Tingkat Risiko</div>
+                    <strong id="detail-modal-risk">-</strong>
+                </div>
+                <div class="detail-box">
+                    <div class="meta-label">Probabilitas Model</div>
+                    <strong id="detail-modal-probability">-</strong>
+                </div>
+                <div class="detail-box">
+                    <div class="meta-label">Perkiraan Warga Terdampak</div>
+                    <strong id="detail-modal-population">-</strong>
+                </div>
+                <div class="detail-box">
+                    <div class="meta-label">Potensi Gempa Susulan</div>
+                    <strong id="detail-modal-aftershock">-</strong>
+                </div>
+                <div class="detail-box">
+                    <div class="meta-label">Penyebab Dominan</div>
+                    <strong id="detail-modal-cause">-</strong>
+                </div>
+                <div class="detail-box">
+                    <div class="meta-label">Jarak ke Sumber</div>
+                    <strong id="detail-modal-distance">-</strong>
+                </div>
+                <div class="detail-box">
+                    <div class="meta-label">Magnitudo Utama</div>
+                    <strong id="detail-modal-mainshock">-</strong>
+                </div>
+                <div class="detail-box">
+                    <div class="meta-label">Tahun Data &amp; Prediksi</div>
+                    <strong id="detail-modal-year">-</strong>
+                </div>
+            </div>
+        </div>
+    </div>
 
-    const WEST_JAVA_BOUNDS = [106.3, -7.8, 108.9, -5.9];
-    const DEFAULT_WARNING_THRESHOLD = 0.7;
+    <div class="modal" id="guide-modal" role="dialog" aria-modal="true" aria-labelledby="guide-modal-title">
+        <div class="modal__backdrop" data-close-modal></div>
+        <div class="modal__dialog">
+            <button class="modal__close" type="button" aria-label="Tutup panduan" data-close-modal>&times;</button>
+            <h3 id="guide-modal-title">Panduan Kesiapsiagaan</h3>
+            <p class="meta-label">Checklist mitigasi cepat untuk keluarga.</p>
+            <ol class="checklist" id="guide-list">
+                <li><span class="icon-step">1</span><span>Simpan tas darurat: obat, lampu, air, salinan dokumen penting.</span></li>
+                <li><span class="icon-step">2</span><span>Tentukan titik kumpul dan jalur evakuasi di rumah serta kantor.</span></li>
+                <li><span class="icon-step">3</span><span>Amankan perabot tinggi; matikan listrik/gas setelah guncangan berhenti.</span></li>
+                <li><span class="icon-step">4</span><span>Ikuti informasi resmi BMKG/BPBD; hindari hoaks.</span></li>
+                <li><span class="icon-step">5</span><span>Latih keluarga: drop-cover-hold dan kontak darurat.</span></li>
+            </ol>
+            <button class="cta-button" type="button" data-close-modal>Tutup</button>
+        </div>
+    </div>
 
-    const COLOR_MODE_LABELS = {
-        risk: "Exposure (Probabilitas x Populasi BPS)",
-        probability: "Probabilitas Kejadian",
-        pop_exposed: "Populasi Terpapar (BPS)",
-    };
+    <div class="modal" id="cause-modal" role="dialog" aria-modal="true" aria-labelledby="cause-modal-title">
+        <div class="modal__backdrop" data-close-modal></div>
+        <div class="modal__dialog">
+            <button class="modal__close" type="button" aria-label="Tutup penyebab" data-close-modal>&times;</button>
+            <h3 id="cause-modal-title">Mengapa Gempa Bisa Terjadi di Wilayah Ini?</h3>
+            <div id="cause-modal-text" class="modal-cause-text"></div>
+            <p class="meta-label">Informasi pendukung, bukan penetapan resmi.</p>
+            <button class="cta-button" type="button" data-close-modal>Tutup</button>
+        </div>
+    </div>
 
-    const COLOR_PALETTES = {
-        risk: ["#fff7ec", "#fee8c8", "#fdbb84", "#fc8d59", "#d7301f", "#7f0000"],
-        probability: ["#f0f9e8", "#bae4bc", "#7bccc4", "#43a2ca", "#0868ac"],
-        pop_exposed: ["#f5f3ff", "#e0e7ff", "#c7d2fe", "#a5b4fc", "#7c3aed"],
-    };
+            <script src="https://cdn.jsdelivr.net/npm/ol@v9.2.4/dist/ol.js"></script>
+    <script>
+        // Relaksasi batas untuk tampilan peta (tidak memengaruhi ML)
+        const WEST_JAVA_BOUNDS = [106.0, -8.5, 109.2, -5.5];
+        const MAX_POINTS = 300;
+        const DEFAULT_MODEL = "rf";
 
-    const LEGEND_LABELS = {
-        risk: ["Exposure rendah", "Exposure tinggi"],
-        probability: ["Probabilitas rendah", "Probabilitas tinggi"],
-        pop_exposed: ["Paparan kecil", "Paparan besar"],
-    };
-
-    const RISK_COLOR_SCALE = {
-        Extreme: "#7f1d1d",
-        High: "#b91c1c",
-        Medium: "#f59e0b",
-        Low: "#10b981",
-        default: "#94a3b8",
-    };
-
-    const RISK_LEGEND_ORDER = ["Extreme", "High", "Medium", "Low"];
-    const MAX_POINTS = 100;
-
-    const select = document.getElementById("model-select");
-    const headerTargetYear = document.getElementById("header-target-year");
-    const headerUpdated = document.getElementById("header-updated");
-    const mapModelLabel = document.getElementById("map-model-label");
-    const impactModelLabel = document.getElementById("impact-model-label");
-    const mapMeta = document.getElementById("map-meta");
-    const pointCountLabel = document.getElementById("point-count-label");
-    const legendGradient = document.getElementById("legend-gradient");
-    const legendLowLabel = document.getElementById("legend-low-label");
-    const legendHighLabel = document.getElementById("legend-high-label");
-    const legendCategories = document.getElementById("legend-categories");
-    const legendGradientBlock = document.getElementById("legend-gradient-block");
-    const impactBody = document.getElementById("impact-body");
-    const modeButtons = document.querySelectorAll("[data-color-mode]");
-    const riskSlider = document.getElementById("risk-threshold");
-    const riskSliderValue = document.getElementById("risk-threshold-value");
-    const tooltipEl = document.getElementById("map-tooltip");
-    const warningInput = document.getElementById("warning-threshold");
-    const decisionBanner = document.getElementById("decision-banner");
-    const decisionBannerText = document.getElementById("decision-banner-text");
-
-    let colorMode = "risk";
-    let currentStats = {
-        probability: { min: 0, max: 1 },
-        risk: { min: 0, max: 1 },
-        pop_exposed: { min: 0, max: 1 },
-    };
-    let selectedFeature = null;
-    let hoverFeature = null;
-    let currentFeaturesRaw = [];
-    let allPointProps = [];
-    let riskThresholdValueNumber = 0;
-
-    const baseLayer = new ol.layer.Tile({
-        source: new ol.source.OSM(),
-    });
-
-    const gridSource = new ol.source.Vector();
-
-    const gridLayer = new ol.layer.Vector({
-        source: gridSource,
-        style: (feature) => {
-            const props = feature.getProperties();
-            const color = getFeatureColor(props);
-            const radius = getPointRadius(props);
-            const isSelected = feature.get("isSelected");
-            const isHovered = feature.get("isHovered");
-            const styles = [
-                new ol.style.Style({
-                    image: new ol.style.Circle({
-                        radius,
-                        fill: new ol.style.Fill({
-                            color: colorToCss(color, isSelected ? 0.95 : isHovered ? 0.9 : 0.8),
-                        }),
-                        stroke: new ol.style.Stroke({
-                            color: isHovered ? "#0f172a" : "rgba(15, 23, 42, 0.5)",
-                            width: isSelected ? 1.8 : 1,
-                        }),
-                    }),
-                }),
-            ];
-            if (isSelected) {
-                styles.push(
-                    new ol.style.Style({
-                        image: new ol.style.Circle({
-                            radius: radius + 5,
-                            stroke: new ol.style.Stroke({
-                                color: "rgba(59, 130, 246, 0.6)",
-                                width: 2,
-                            }),
-                        }),
-                    })
-                );
-            }
-            return styles;
-        },
-    });
-
-    const view = new ol.View({
-        center: ol.proj.fromLonLat([107.6, -6.8]),
-        zoom: 7,
-        minZoom: 6,
-        maxZoom: 12,
-        extent: ol.proj.transformExtent(WEST_JAVA_BOUNDS, "EPSG:4326", "EPSG:3857"),
-        constrainOnlyCenter: true,
-    });
-
-    const map = new ol.Map({
-        target: "map",
-        layers: [baseLayer, gridLayer],
-        view,
-    });
-    view.fit(ol.proj.transformExtent(WEST_JAVA_BOUNDS, "EPSG:4326", "EPSG:3857"), {
-        padding: [40, 40, 40, 40],
-        duration: 0,
-    });
-
-    const tooltipOverlay = new ol.Overlay({
-        element: tooltipEl,
-        offset: [0, -14],
-        positioning: "bottom-center",
-    });
-    map.addOverlay(tooltipOverlay);
-
-    const mapViewport = map.getViewport();
-
-    function isWithinWestJava(lon, lat) {
-        if (!Number.isFinite(lon) || !Number.isFinite(lat)) {
-            return false;
-        }
-        const [minLon, minLat, maxLon, maxLat] = WEST_JAVA_BOUNDS;
-        return lon >= minLon && lon <= maxLon && lat >= minLat && lat <= maxLat;
-    }
-
-    function colorToCss(color, alpha = 1) {
-        if (!color) {
-            return `rgba(226, 232, 240, ${alpha})`;
-        }
-        if (typeof color === "string") {
-            const rgbColor = hexToRgb(color);
-            return `rgba(${rgbColor.r}, ${rgbColor.g}, ${rgbColor.b}, ${alpha})`;
-        }
-        return `rgba(${color.r}, ${color.g}, ${color.b}, ${alpha})`;
-    }
-
-    function hexToRgb(hex) {
-        const sanitized = hex.replace("#", "");
-        const bigint = parseInt(sanitized, 16);
-        return {
-            r: (bigint >> 16) & 255,
-            g: (bigint >> 8) & 255,
-            b: bigint & 255,
+        const riskColors = {
+            high: "#ef4444",
+            medium: "#f59e0b",
+            low: "#22c55e",
+            default: "#94a3b8",
         };
-    }
 
-    function mixRgb(a, b, t) {
-        return {
-            r: Math.round(a.r + (b.r - a.r) * t),
-            g: Math.round(a.g + (b.g - a.g) * t),
-            b: Math.round(a.b + (b.b - a.b) * t),
+        const riskLabels = {
+            high: "Risiko Tinggi",
+            medium: "Risiko Sedang",
+            low: "Risiko Rendah",
         };
-    }
 
-    function getMetricValue(props, mode) {
-        if (mode === "probability") {
-            return Number(props.probability) || 0;
+        const headerTargetYear = document.getElementById("header-target-year");
+        const headerUpdated = document.getElementById("header-updated");
+        const summaryRiskBadge = document.getElementById("summary-risk-badge");
+        const summaryRiskLabel = document.getElementById("summary-risk-label");
+        const summaryPopulation = document.getElementById("summary-population");
+        const summaryAftershock = document.getElementById("summary-aftershock");
+        const summaryCause = document.getElementById("summary-cause");
+        const mapMeta = document.getElementById("map-meta");
+
+        const detailLocation = document.getElementById("detail-location");
+        const detailRiskText = document.getElementById("detail-risk-text");
+        const detailRiskValue = document.getElementById("detail-risk-value");
+        const detailPopulationValue = document.getElementById("detail-population-value");
+        const detailAftershockValue = document.getElementById("detail-aftershock-value");
+        const detailCauseValue = document.getElementById("detail-cause-value");
+        const detailOpenModalBtn = document.getElementById("detail-open-modal");
+
+        const meaningList = document.getElementById("meaning-list");
+        const tooltipEl = document.getElementById("map-tooltip");
+
+        const detailModal = document.getElementById("detail-modal");
+        const detailModalTitle = document.getElementById("detail-modal-title");
+        const detailModalLocation = document.getElementById("detail-modal-location");
+        const detailModalRisk = document.getElementById("detail-modal-risk");
+        const detailModalProbability = document.getElementById("detail-modal-probability");
+        const detailModalPopulation = document.getElementById("detail-modal-population");
+        const detailModalAftershock = document.getElementById("detail-modal-aftershock");
+        const detailModalCause = document.getElementById("detail-modal-cause");
+        const detailModalDistance = document.getElementById("detail-modal-distance");
+        const detailModalMainshock = document.getElementById("detail-modal-mainshock");
+        const detailModalYear = document.getElementById("detail-modal-year");
+
+        const guideModal = document.getElementById("guide-modal");
+        const guideOpenBtn = document.getElementById("guide-open-btn");
+        const causeModal = document.getElementById("cause-modal");
+        const causeOpenBtn = document.getElementById("cause-open-btn");
+        const causeModalText = document.getElementById("cause-modal-text");
+        const closeButtons = document.querySelectorAll("[data-close-modal]");
+
+        let map;
+        let gridSource;
+        let gridLayer;
+        let tooltipOverlay;
+        let selectedFeature = null;
+        let currentFeaturesRaw = [];
+        let allPointProps = [];
+        let currentModel = DEFAULT_MODEL;
+
+        function formatNumber(value) {
+            const num = Number(value);
+            if (!Number.isFinite(num)) return "-";
+            return num.toLocaleString("id-ID");
         }
-        if (mode === "pop_exposed") {
-            return Number(props.pop_exposed) || 0;
+
+        function formatPercent(value) {
+            const num = Number(value);
+            if (!Number.isFinite(num)) return "-";
+            return `${(num * 100).toFixed(1)}%`;
         }
-        return Number(props.risk) || 0;
-    }
 
-    function getScaleValue(mode, value) {
-        const stat = currentStats[mode] || { min: 0, max: 1 };
-        const min = Number(stat.min ?? 0);
-        const max = Number(stat.max ?? 1);
-        if (!Number.isFinite(value) || max <= min) {
-            return 0;
+        function formatKilometer(value) {
+            const num = Number(value);
+            if (!Number.isFinite(num)) return "-";
+            return `${num.toFixed(1)} km`;
         }
-        if (mode === "probability") {
-            return (value - min) / (max - min || 1);
+
+        function formatAftershock(value) {
+            return String(value || "-").replace(/High/i, "Tinggi").replace(/Medium/i, "Sedang").replace(/Low/i, "Rendah");
         }
-        const logMin = Math.log10(min + 1);
-        const logMax = Math.log10(max + 1);
-        const logValue = Math.log10(value + 1);
-        const denom = logMax - logMin;
-        return denom <= 0 ? 0 : (logValue - logMin) / denom;
-    }
 
-    function getGradientColor(mode, value) {
-        const palette = COLOR_PALETTES[mode] || ["#e2e8f0", "#0f172a"];
-        const normalized = Math.min(Math.max(getScaleValue(mode, value), 0), 1);
-        if (palette.length === 1) {
-            return hexToRgb(palette[0]);
+        function formatLocationName(props) {
+            const kab = props?.kab_kota;
+            const prov = props?.provinsi;
+            if (!kab) return prov || "Wilayah tidak dikenal";
+            const lowered = kab.toLowerCase();
+            if (lowered.includes("laut") || lowered.includes("perairan")) return "Laut / Perairan";
+            return prov ? `${kab}, ${prov}` : kab;
         }
-        const steps = palette.length - 1;
-        const scaled = normalized * steps;
-        const idx = Math.floor(scaled);
-        const fraction = scaled - idx;
-        const start = hexToRgb(palette[idx]);
-        const end = hexToRgb(palette[Math.min(idx + 1, steps)]);
-        return mixRgb(start, end, fraction);
-    }
 
-    function getFeatureColor(props) {
-        if (colorMode === "risk") {
-            return RISK_COLOR_SCALE[props.risk_label] || RISK_COLOR_SCALE.default;
+        function normalizeRiskLabel(label) {
+            const text = String(label || "").toLowerCase();
+            if (text.includes("extreme") || text.includes("tinggi") || text.includes("high")) return "high";
+            if (text.includes("medium") || text.includes("sedang")) return "medium";
+            return "low";
         }
-        const metric = getMetricValue(props, colorMode);
-        return getGradientColor(colorMode, metric);
-    }
 
-    function getPointRadius(props) {
-        const stat = currentStats.risk || { min: 0, max: 1 };
-        const min = Number(stat.min ?? 0);
-        const max = Number(stat.max ?? 1);
-        const value = Number(props.risk) || 0;
-        if (max <= min) {
-            return 6;
+        function describeRiskLabel(level) {
+            return riskLabels[level] || "Risiko Rendah";
         }
-        const logMin = Math.log10(min + 1);
-        const logMax = Math.log10(max + 1);
-        const logValue = Math.log10(value + 1);
-        const normalized = (logValue - logMin) / ((logMax - logMin) || 1);
-        return 6 + Math.min(Math.max(normalized, 0), 1) * 10;
-    }
 
-    function updateLegend() {
-        if (colorMode === "risk") {
-            legendCategories.style.display = "flex";
-            legendGradientBlock.style.display = "none";
-            legendCategories.innerHTML = RISK_LEGEND_ORDER.map((label) => {
-                const color = RISK_COLOR_SCALE[label] || RISK_COLOR_SCALE.default;
-                return `<span class="legend-badge"><span class="legend-dot" style="background:${color};"></span>${label}</span>`;
-            }).join("");
-            return;
+        function badgeColor(level) {
+            return riskColors[level] || riskColors.default;
         }
-        legendCategories.style.display = "none";
-        legendCategories.innerHTML = "";
-        legendGradientBlock.style.display = "flex";
-        const palette = COLOR_PALETTES[colorMode] || COLOR_PALETTES.risk;
-        legendGradient.style.background = `linear-gradient(90deg, ${palette.join(", ")})`;
-        const labels = LEGEND_LABELS[colorMode] || ["Nilai rendah", "Nilai tinggi"];
-        legendLowLabel.textContent = labels[0];
-        legendHighLabel.textContent = labels[1];
-    }
 
-    function describeProbability(prob) {
-        const value = Number(prob) || 0;
-        if (value >= 0.75) return "Sangat tinggi";
-        if (value >= 0.5) return "Tinggi";
-        if (value >= 0.25) return "Sedang";
-        if (value >= 0.1) return "Rendah";
-        return "Sangat rendah";
-    }
+        function buildCauseContent(causeRaw) {
+            const cause = String(causeRaw || "").toLowerCase();
+            const sections = {
+                regional: {
+                    title: "Aktivitas Tektonik Regional",
+                    body: "Lempeng Sunda terus bergerak perlahan. Tekanan yang terkumpul di kerak bumi melepaskan energi sebagai gempa, terutama di zona pegunungan dan dataran tinggi Jawa Barat.",
+                },
+                sesar: {
+                    title: "Pergerakan Sesar Aktif",
+                    body: "Jalur sesar aktif di darat, seperti Sesar Lembang atau Sesar Cimandiri, dapat bergeser mendadak. Pergeseran ini menimbulkan guncangan kuat di dekat jalur patahan.",
+                },
+                subduksi: {
+                    title: "Tumbukan Lempeng Selatan Jawa",
+                    body: "Lempeng Indo-Australia menunjam ke bawah Lempeng Eurasia di selatan Jawa. Proses subduksi ini dapat memicu gempa besar yang dirasakan luas hingga ke daratan.",
+                },
+                vulkanik: {
+                    title: "Aktivitas Gunung Api",
+                    body: "Pergerakan magma dan tekanan gas di bawah gunung api (misal Tangkuban Parahu, G. Gede) bisa memicu gempa vulkanik berskala lokal.",
+                },
+            };
 
-    function formatPercent(prob) {
-        return `${(Number(prob || 0) * 100).toFixed(1)}%`;
-    }
+            let key = "regional";
+            if (cause.includes("fault") || cause.includes("sesar")) key = "sesar";
+            else if (cause.includes("subduction") || cause.includes("subduksi") || cause.includes("tumbukan")) key = "subduksi";
+            else if (cause.includes("vul") || cause.includes("volcan")) key = "vulkanik";
 
-    const DECISION_SUPPORT_NOTE = "Decision Support System, not official early warning";
-    const DECISION_SUPPORT_LABEL = DECISION_SUPPORT_NOTE;
-
-    function formatNumber(value) {
-        const numeric = Number(value);
-        if (!Number.isFinite(numeric)) return "-";
-        return numeric.toLocaleString("id-ID");
-    }
-
-    function formatKilometer(value) {
-        const numeric = Number(value);
-        if (!Number.isFinite(numeric)) return "-";
-        return `${numeric.toFixed(1)} km`;
-    }
-
-    function formatCauseExplanation(props) {
-        if (!props) return "-";
-        return props.cause_explanation || props.seismic_cause || "-";
-    }
-
-    function formatCauseSummary(props) {
-        if (!props) return "-";
-        const cause = props.seismic_cause || "Tidak diketahui";
-        const explanation = formatCauseExplanation(props);
-        return explanation ? `${cause} — ${explanation}` : cause;
-    }
-
-    function formatCauseDistances(props) {
-        if (!props) return "Jarak struktur tidak tersedia";
-        const segments = [];
-        if (Number.isFinite(Number(props.distance_to_subduction_km))) {
-            segments.push(`Subduksi ${formatKilometer(props.distance_to_subduction_km)}`);
+            const picked = sections[key];
+            return `
+                <h4>${picked.title}</h4>
+                <p>${picked.body}</p>
+                <h4>Apa artinya bagi warga?</h4>
+                <p>Guncangan bisa muncul tiba-tiba. Siapkan jalur evakuasi, amankan perabot, dan ikuti arahan resmi saat terjadi gempa.</p>
+                <h4>Siapa yang memantau?</h4>
+                <p>BMKG dan BPBD memantau aktivitas tektonik serta menyampaikan peringatan resmi saat diperlukan.</p>
+            `;
         }
-        if (Number.isFinite(Number(props.distance_to_fault_km))) {
-            segments.push(`Sesar ${formatKilometer(props.distance_to_fault_km)}`);
-        }
-        if (Number.isFinite(Number(props.distance_to_volcano_km))) {
-            segments.push(`Gunung api ${formatKilometer(props.distance_to_volcano_km)}`);
-        }
-        return segments.length ? segments.join(" | ") : "Jarak struktur tidak tersedia";
-    }
 
-    function formatMagnitude(value) {
-        const numeric = Number(value);
-        if (!Number.isFinite(numeric) || numeric <= 0) {
-            return "-";
-        }
-        return `M ${numeric.toFixed(1)}`;
-    }
-
-    function formatAftershockSummary(props) {
-        if (!props) return "-";
-        const risk = props.aftershock_risk || "Low";
-        const magnitudeLabel = formatMagnitude(props.mainshock_magnitude);
-        return `${risk} (${magnitudeLabel})`;
-    }
-
-    function formatDecisionLabel(props) {
-        return props?.decision_support_note || props?.aftershock_decision_label || DECISION_SUPPORT_LABEL;
-    }
-
-    function formatExposure(value) {
-        const numeric = Number(value);
-        if (!Number.isFinite(numeric)) return "-";
-        return formatNumber(Math.round(numeric));
-    }
-
-    function formatRecommendationsText(props) {
-        const recs = Array.isArray(props?.mitigation_recommendations)
-            ? props.mitigation_recommendations
-            : [];
-        if (!recs.length) {
-            return "Monitoring dan pemutakhiran informasi.";
-        }
-        return recs.join("; ");
-    }
-
-    function renderRecommendationList(props) {
-        const recs = Array.isArray(props?.mitigation_recommendations)
-            ? props.mitigation_recommendations
-            : [];
-        if (!recs.length) {
-            return `<div class="impact-placeholder">Rekomendasi tidak tersedia.</div>`;
-        }
-        return `<ul class="recommendation-list">${recs.map((item) => `<li>${item}</li>`).join("")}</ul>`;
-    }
-
-    function buildImpactBullets(props) {
-        if (!props) {
-            return ["Pilih titik pada peta untuk melihat ringkasan risiko."];
-        }
-        const probabilityText = `${formatPercent(props.probability)} (${describeProbability(props.probability)})`;
-        const exposureValue = formatExposure(props.exposure ?? props.risk);
-        const popText = formatNumber(props.pop_exposed);
-        const causeSummary = formatCauseSummary(props);
-        const distanceSummary = formatCauseDistances(props);
-        const aftershockSummary = formatAftershockSummary(props);
-        const decisionLabel = formatDecisionLabel(props);
-        const aftershockExplanation = props.aftershock_explanation || "";
-        const recommendationsText = formatRecommendationsText(props);
-        const decisionNote = props?.decision_support_note || DECISION_SUPPORT_NOTE;
-        return [
-            `${decisionNote}.`,
-            `Exposure ${props.risk_label || "-"} (~${exposureValue} jiwa ekuivalen).`,
-            `Rekomendasi mitigasi: ${recommendationsText}.`,
-            `Penyebab dominan: ${causeSummary}.`,
-            `Jarak struktur kunci: ${distanceSummary}.`,
-            `${decisionLabel}: Risiko aftershock ${aftershockSummary}. ${aftershockExplanation}`.trim(),
-            `Probabilitas ${probabilityText} untuk minimal satu kejadian.`,
-            `Populasi terpapar ~${popText} jiwa (BPS kab/kota).`,
-        ];
-    }
-
-    function formatLocationName(props) {
-        const kab = props?.kab_kota;
-        const prov = props?.provinsi;
-        if (!kab) {
-            return prov ? `Laut / Perairan - ${prov}` : "Laut / Perairan";
-        }
-        const lowered = kab.toLowerCase();
-        if (lowered.includes("laut") || lowered.includes("perairan")) {
-            return "Laut / Perairan";
-        }
-        return prov ? `${kab} - ${prov}` : kab;
-    }
-
-    function setUpdatedNow() {
-        if (!headerUpdated) return;
-        const now = new Date();
-        const hh = String(now.getHours()).padStart(2, "0");
-        const mm = String(now.getMinutes()).padStart(2, "0");
-        const ss = String(now.getSeconds()).padStart(2, "0");
-        headerUpdated.textContent = `Update: ${hh}:${mm}:${ss}`;
-    }
-
-    function updateHeaderSummary(best, modelKey) {
-        if (!headerTargetYear) {
-            return;
-        }
-        const label = MODEL_FIELDS[modelKey]?.label || "-";
-        const targetYear = best?.target_year ?? "-";
-        headerTargetYear.textContent = `Tahun prediksi: ${targetYear} | Model ${label}`;
-    }
-
-    function updateMapSummary(features, modelKey, shownCount) {
-        const label = MODEL_FIELDS[modelKey]?.label || "-";
-        mapModelLabel.textContent = label;
-        if (!features || !features.length) {
-            mapMeta.textContent = "Data prediksi tidak tersedia.";
-            pointCountLabel.textContent = "Menampilkan 0 titik.";
-            return;
-        }
-        const first = features[0]?.properties || {};
-        mapMeta.textContent = `Tahun fitur ${first.year ?? "-"} | Tahun prediksi ${first.target_year ?? "-"} | Total grid ${features.length} | Mode warna: ${COLOR_MODE_LABELS[colorMode]}`;
-        pointCountLabel.textContent = `Menampilkan ${shownCount} titik exposure teratas (ambang >= ${formatNumber(Math.round(riskThresholdValueNumber))}).`;
-    }
-
-    function extractProps(feature) {
-        if (!feature) return null;
-        const { geometry, ...props } = feature.getProperties();
-        return props;
-    }
-
-    function resetPanel(message = "Pilih titik pada peta untuk melihat ringkasan risiko.") {
-        impactBody.innerHTML = `<div class="impact-placeholder">${message}</div>`;
-    }
-
-    function updateImpactPanel(feature) {
-        const props = extractProps(feature);
-        if (!props) {
-            resetPanel();
-            return;
-        }
-        const bullets = buildImpactBullets(props)
-            .map((item) => `<li>${item}</li>`)
-            .join("");
-        impactBody.innerHTML = `
-            <div>
-                <p class="impact-region">${formatLocationName(props)}</p>
-                <p class="impact-subtitle">Grid ${props.grid_id || "-"} | Exposure ${props.risk_label || "-"}</p>
-            </div>
-            <div class="impact-grid">
-                <div class="impact-metric">
-                    <span>Probabilitas</span>
-                    <strong>${formatPercent(props.probability)}</strong>
-                    <small>${describeProbability(props.probability)}</small>
-                </div>
-                <div class="impact-metric">
-                    <span>Populasi terpapar</span>
-                    <strong>${formatNumber(props.pop_exposed)}</strong>
-                    <small>Sumber: BPS kab/kota</small>
-                </div>
-                <div class="impact-metric">
-                    <span>Exposure (P x Pop)</span>
-                    <strong>${formatExposure(props.exposure ?? props.risk)}</strong>
-                    <small>${props.risk_label || "-"}</small>
-                </div>
-                <div class="impact-metric">
-                    <span>Penyebab dominan</span>
-                    <strong>${props.seismic_cause || "-"}</strong>
-                    <small>${formatCauseExplanation(props)}</small>
-                </div>
-                <div class="impact-metric">
-                    <span>Aftershock</span>
-                    <strong>${formatAftershockSummary(props)}</strong>
-                    <small>${formatDecisionLabel(props)}</small>
-                </div>
-            </div>
-            <div class="impact-recommendations">
-                <div class="impact-recommendations-header">
-                    <span>Mitigation Recommendations</span>
-                    <span class="recommendation-note">${formatDecisionLabel(props)}</span>
-                </div>
-                ${renderRecommendationList(props)}
-                <small class="recommendation-note">${props?.decision_support_note || DECISION_SUPPORT_NOTE}</small>
-            </div>
-            <ul class="impact-bullets">${bullets}</ul>
-        `;
-    }
-
-    function setSelectedFeature(feature, options = {}) {
-        const { skipZoom = false, silent = false } = options;
-        if (selectedFeature === feature) {
-            if (!silent && feature) {
-                updateImpactPanel(feature);
-            }
-            return;
-        }
-        if (selectedFeature) {
-            selectedFeature.set("isSelected", false);
-            selectedFeature.changed();
-        }
-        selectedFeature = feature || null;
-        if (selectedFeature) {
-            selectedFeature.set("isSelected", true);
-            selectedFeature.changed();
-            if (!silent) {
-                updateImpactPanel(selectedFeature);
-            }
-            if (!skipZoom) {
-                const geometry = selectedFeature.getGeometry();
-                if (geometry) {
-                    const view = map.getView();
-                    const currentZoom = view.getZoom() || 5;
-                    view.animate({
-                        center: geometry.getCoordinates(),
-                        duration: 450,
-                        zoom: Math.min(7.5, Math.max(currentZoom, 5.8) + 0.25),
-                    });
-                }
-            }
-        } else if (!silent) {
-            resetPanel();
-        }
-    }
-
-    function setHoverFeature(feature) {
-        if (hoverFeature === feature) return;
-        if (hoverFeature) {
-            hoverFeature.set("isHovered", false);
-            hoverFeature.changed();
-        }
-        hoverFeature = feature || null;
-        if (hoverFeature) {
-            hoverFeature.set("isHovered", true);
-            hoverFeature.changed();
-        }
-    }
-
-    function showTooltip(feature, coordinate) {
-        const props = extractProps(feature);
-        if (!props) {
-            hideTooltip();
-            return;
-        }
-        tooltipEl.innerHTML = `
-            <strong>${formatLocationName(props)}</strong><br>
-            Risiko: ${props.risk_label || "-"} | ${formatPercent(props.probability)}<br>
-            Populasi: ${formatNumber(props.pop_exposed)}<br>
-            Exposure: ${formatExposure(props.exposure ?? props.risk)}<br>
-            Penyebab: ${props.seismic_cause || "-"}<br>
-            Aftershock: ${formatAftershockSummary(props)}
-        `;
-        tooltipEl.classList.add("visible");
-        tooltipOverlay.setPosition(coordinate);
-    }
-
-    function hideTooltip() {
-        tooltipEl.classList.remove("visible");
-        tooltipOverlay.setPosition(undefined);
-    }
-
-    function computePointProps(features) {
-        return (features || [])
-            .map((feature) => {
-                const props = { ...(feature?.properties || {}) };
-                let lat = Number(props.centroid_lat);
-                let lon = Number(props.centroid_lon);
-                if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
-                    const baseLat = Number(props.grid_lat);
-                    const baseLon = Number(props.grid_lon);
-                    if (Number.isFinite(baseLat) && Number.isFinite(baseLon)) {
-                        lat = baseLat + 0.5;
-                        lon = baseLon + 0.5;
-                    } else if (props.grid_id && String(props.grid_id).includes("_")) {
-                        const [rawLat, rawLon] = String(props.grid_id).split("_");
-                        const latNum = Number(rawLat);
-                        const lonNum = Number(rawLon);
-                        if (Number.isFinite(latNum) && Number.isFinite(lonNum)) {
-                            lat = latNum + 0.5;
-                            lon = lonNum + 0.5;
-                        }
-                    }
-                }
-                if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
-                    return null;
-                }
-                if (!isWithinWestJava(lon, lat)) {
-                    return null;
-                }
-                props.centroid_lat = lat;
-                props.centroid_lon = lon;
-                return props;
-            })
-            .filter(Boolean);
-    }
-
-    function clampWarningThreshold(value) {
-        const numeric = Number(value);
-        if (!Number.isFinite(numeric)) {
-            return DEFAULT_WARNING_THRESHOLD;
-        }
-        return Math.min(1, Math.max(0, numeric));
-    }
-
-    function findDecisionSupportCandidate(threshold) {
-        if (!Array.isArray(currentFeaturesRaw)) {
-            return null;
-        }
-        let candidate = null;
-        for (const feature of currentFeaturesRaw) {
-            const props = feature?.properties;
-            if (!props) continue;
-            const probability = Number(props.probability);
-            if (!Number.isFinite(probability) || probability < threshold) {
-                continue;
-            }
-            if (!candidate || probability > candidate.probability) {
-                candidate = { probability, props };
+        function get(obj, path, fallback = "-") {
+            try {
+                return path.split(".").reduce((acc, key) => (acc && acc[key] !== undefined ? acc[key] : undefined), obj) ?? fallback;
+            } catch (e) {
+                return fallback;
             }
         }
-        return candidate;
-    }
 
-    function updateDecisionSupportNotice() {
-        if (!decisionBanner || !warningInput) {
-            return;
+        function showMessage(text) {
+            if (mapMeta) mapMeta.textContent = text;
         }
-        const threshold = clampWarningThreshold(warningInput.value);
-        warningInput.value = threshold.toFixed(2);
-        const candidate = findDecisionSupportCandidate(threshold);
-        if (!candidate) {
-            decisionBanner.hidden = true;
-            decisionBannerText.textContent =
-                "Belum ada grid dengan probabilitas yang melampaui ambang dukungan keputusan.";
-            return;
-        }
-        decisionBanner.hidden = false;
-        const location = formatLocationName(candidate.props) || "Lokasi grid";
-        const probabilityText = formatPercent(candidate.probability);
-        const thresholdText = formatPercent(threshold);
-        decisionBannerText.textContent = `Model memperkirakan probabilitas ${probabilityText} di ${location}, melebihi ambang dukungan keputusan ${thresholdText}. Gunakan informasi ini sebagai pertimbangan tambahan saja.`;
-    }
 
-    function refreshPoints(options = {}) {
-        if (!allPointProps.length) {
-            gridSource.clear();
-            updateMapSummary(currentFeaturesRaw, select.value, 0);
-            resetPanel();
-            return;
-        }
-        const threshold = Number(riskSlider.value) || 0;
-        riskThresholdValueNumber = threshold;
-        riskSliderValue.textContent = `>= ${formatNumber(Math.round(threshold))}`;
-        const sorted = [...allPointProps].sort((a, b) => (b.risk || 0) - (a.risk || 0));
-        const filtered = threshold ? sorted.filter((item) => (item.risk || 0) >= threshold) : sorted;
-        const limited = filtered.slice(0, MAX_POINTS);
-        const previousSelectedId = selectedFeature?.get("grid_id");
-        setSelectedFeature(null, { skipZoom: true, silent: true });
-        gridSource.clear();
-        limited.forEach((props) => {
-            const feature = new ol.Feature({
-                geometry: new ol.geom.Point(ol.proj.fromLonLat([props.centroid_lon, props.centroid_lat])),
-            });
-            feature.setProperties(props);
-            gridSource.addFeature(feature);
-        });
-        if (previousSelectedId) {
-            const nextMatch = gridSource.getFeatures().find(
-                (feat) => feat.get("grid_id") === previousSelectedId
-            );
-            if (nextMatch) {
-                setSelectedFeature(nextMatch, { skipZoom: true });
+        function normalizeResponse(response) {
+            let parsed = {};
+            if (Array.isArray(response)) {
+                parsed = { points: response };
+            } else if (response && Array.isArray(response.results)) {
+                parsed = { points: response.results, summary: response.summary || response.meta?.summary || null, meta: response.meta || {} };
+            } else if (response && Array.isArray(response.points)) {
+                parsed = response;
+            } else if (response && Array.isArray(response.features)) {
+                parsed = { points: response.features, summary: response.summary || response.meta?.summary || null, meta: response.meta || {} };
+            } else {
+                parsed = { points: [] };
             }
-        }
-        if (!selectedFeature && options.autoSelect && gridSource.getFeatures().length) {
-            setSelectedFeature(gridSource.getFeatures()[0], { skipZoom: true });
-        }
-        if (!gridSource.getFeatures().length) {
-            resetPanel("Tidak ada grid yang memenuhi ambang exposure ini.");
-        }
-        updateMapSummary(currentFeaturesRaw, select.value, limited.length);
-        updateLegend();
-        updateDecisionSupportNotice();
-    }
-
-    async function loadGrid() {
-        const modelKey = select.value;
-        impactModelLabel.textContent = MODEL_FIELDS[modelKey]?.label || "-";
-        mapMeta.textContent = "Memuat data grid...";
-        pointCountLabel.textContent = "Menampilkan 0 titik.";
-        resetPanel("Memuat data prediksi...");
-        try {
-            const res = await fetch(`/api/prediksi/?model=${modelKey}`);
-            if (!res.ok) {
-                throw new Error(`Gagal memuat data (${res.status})`);
-            }
-            const geo = await res.json();
-            currentStats = geo?.meta?.stats || currentStats;
-            currentFeaturesRaw = geo.features || [];
-            allPointProps = computePointProps(currentFeaturesRaw);
-            const topRisk = [...allPointProps].sort((a, b) => (b.risk || 0) - (a.risk || 0))[0];
-            configureSlider();
-            refreshPoints({ autoSelect: true });
-            updateHeaderSummary(topRisk, modelKey);
-            setUpdatedNow();
-        } catch (error) {
-            console.error(error);
-            gridSource.clear();
-            currentFeaturesRaw = [];
-            allPointProps = [];
-            mapMeta.textContent = "Tidak dapat memuat data.";
-            pointCountLabel.textContent = "Menampilkan 0 titik.";
-            resetPanel("Gagal memuat data prediksi. Periksa kembali server Anda.");
-            updateHeaderSummary(null, select.value);
-            alert("Gagal memuat data prediksi grid. Pastikan endpoint Django berjalan dan data tersedia.");
-        }
-    }
-
-        function configureSlider() {
-            const riskMax = Number(currentStats?.risk?.max) || 1;
-            const sliderMax = Math.max(1, Math.round(riskMax));
-            riskSlider.max = sliderMax;
-            riskSlider.step = Math.max(1, Math.round(sliderMax / 200)) || 1;
-            riskSlider.min = 0;
-            riskSlider.value = 0;
-            riskThresholdValueNumber = 0;
-            riskSliderValue.textContent = `>= ${formatNumber(Math.round(riskThresholdValueNumber))}`;
+            if (!parsed.meta) parsed.meta = {};
+            return parsed;
         }
 
-    modeButtons.forEach((button) => {
-        button.addEventListener("click", () => {
-            const selectedMode = button.getAttribute("data-color-mode");
-            if (!selectedMode || selectedMode === colorMode) {
+        function updateSummaryCard(points = [], summary = {}) {
+            if (!points.length && !summary) {
+                summaryRiskBadge.textContent = "-";
+                summaryRiskBadge.style.background = riskColors.low;
+                summaryRiskLabel.textContent = "-";
+                summaryPopulation.textContent = "-";
+                summaryAftershock.textContent = "-";
+                summaryCause.textContent = "-";
                 return;
             }
-            colorMode = selectedMode;
-            modeButtons.forEach((btn) => {
-                btn.classList.toggle("active", btn === button);
+
+            const level = normalizeRiskLabel(get(summary, "risk", get(summary, "risk_label", points[0]?.risk_label)));
+            const popSum = get(summary, "population", get(summary, "pop_exposed", points.reduce((acc, p) => acc + (Number(p.pop_exposed) || 0), 0)));
+            const aftershockLevel = get(summary, "aftershock_risk", points[0]?.aftershock_risk || "Rendah");
+            const cause = get(summary, "seismic_cause", get(summary, "cause", points[0]?.seismic_cause || "Tektonik Regional"));
+
+            summaryRiskBadge.textContent = describeRiskLabel(level);
+            summaryRiskBadge.style.background = badgeColor(level);
+            summaryRiskLabel.textContent = describeRiskLabel(level);
+            summaryPopulation.textContent = formatNumber(popSum);
+            summaryAftershock.textContent = formatAftershock(aftershockLevel);
+            summaryCause.textContent = cause;
+        }
+
+        function buildDistanceLabel(props) {
+            if (!props) return "-";
+            const parts = [];
+            if (Number.isFinite(Number(props.distance_to_fault_km))) {
+                parts.push(`Sesar ${formatKilometer(props.distance_to_fault_km)}`);
+            }
+            if (Number.isFinite(Number(props.distance_to_subduction_km))) {
+                parts.push(`Subduksi ${formatKilometer(props.distance_to_subduction_km)}`);
+            }
+            return parts.length ? parts.join(" | ") : "-";
+        }
+
+        function updateDetailPanel(feature) {
+            const props = feature?.getProperties ? feature.getProperties() : feature || null;
+            if (!props) {
+                detailLocation.textContent = "Pilih titik pada peta";
+                detailRiskText.textContent = "-";
+                detailRiskValue.textContent = "-";
+                detailPopulationValue.textContent = "-";
+                detailAftershockValue.textContent = "-";
+                detailCauseValue.textContent = "-";
+                causeOpenBtn.disabled = true;
+                delete causeOpenBtn.dataset.cause;
+                detailOpenModalBtn.disabled = true;
+                meaningList.innerHTML = "";
+                return;
+            }
+
+            const level = normalizeRiskLabel(props.risk_label);
+            detailLocation.textContent = formatLocationName(props);
+            detailRiskText.textContent = describeRiskLabel(level);
+            detailRiskValue.textContent = describeRiskLabel(level);
+            detailPopulationValue.textContent = `${formatNumber(props.pop_exposed)} jiwa`;
+            detailAftershockValue.textContent = formatAftershock(props.aftershock_risk);
+            detailCauseValue.textContent = props.seismic_cause || "Tektonik regional";
+            causeOpenBtn.disabled = false;
+            causeOpenBtn.dataset.cause = props.seismic_cause || "";
+            detailOpenModalBtn.disabled = false;
+
+            renderMeaningList(props, level);
+        }
+
+        function renderMeaningList(props, level) {
+            const bullets = [
+                `Risiko saat ini: ${describeRiskLabel(level)}.`,
+                `${formatNumber(props.pop_exposed)} warga diperkirakan terdampak jika skenario terjadi.`,
+            ];
+            meaningList.innerHTML = bullets.map((b) => `<li>${b}</li>`).join("");
+        }
+
+        function updateMapMeta(metaOrFeatures, fallbackFeatures = []) {
+            const features = Array.isArray(metaOrFeatures) ? metaOrFeatures : fallbackFeatures;
+            const meta = Array.isArray(metaOrFeatures) ? {} : metaOrFeatures || {};
+            if ((!features || !features.length) && !meta.target_year) {
+                mapMeta.textContent = "Data tidak tersedia.";
+                return;
+            }
+            const firstProps = features[0]?.properties || features[0] || {};
+            const targetYear = meta.target_year ?? firstProps.target_year ?? "-";
+            const sourceYear = meta.year ?? firstProps.year ?? "-";
+            const count = features?.length ?? meta.count ?? "-";
+            mapMeta.textContent = `Tahun data: ${sourceYear} | Prediksi: ${targetYear} | Titik: ${count}`;
+            headerTargetYear.textContent = `Prediksi tahun: ${targetYear}`;
+            const now = new Date();
+            headerUpdated.textContent = `Pembaruan: ${now.toLocaleTimeString("id-ID")}`;
+        }
+
+        function computePointProps(features) {
+            return (features || [])
+                .map((feature) => {
+                    const props = feature?.properties ? { ...feature.properties } : { ...(feature || {}) };
+                    let lat = Number(props.centroid_lat);
+                    let lon = Number(props.centroid_lon);
+                    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+                        const baseLat = Number(props.grid_lat);
+                        const baseLon = Number(props.grid_lon);
+                        if (Number.isFinite(baseLat) && Number.isFinite(baseLon)) {
+                            lat = baseLat + 0.5;
+                            lon = baseLon + 0.5;
+                        } else if (props.grid_id && String(props.grid_id).includes("_")) {
+                            const [rawLat, rawLon] = String(props.grid_id).split("_");
+                            const latNum = Number(rawLat);
+                            const lonNum = Number(rawLon);
+                            if (Number.isFinite(latNum) && Number.isFinite(lonNum)) {
+                                lat = latNum + 0.5;
+                                lon = lonNum + 0.5;
+                            }
+                        }
+                    }
+                    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+                    if (!isWithinWestJava(lon, lat)) return null;
+                    props.centroid_lat = lat;
+                    props.centroid_lon = lon;
+                    return props;
+                })
+                .filter(Boolean);
+        }
+
+        function isWithinWestJava(lon, lat) {
+            const [minLon, minLat, maxLon, maxLat] = WEST_JAVA_BOUNDS;
+            return lon >= minLon && lon <= maxLon && lat >= minLat && lat <= maxLat;
+        }
+
+        function pointRadius(pop) {
+            const value = Number(pop) || 0;
+            const scaled = Math.log10(value + 1);
+            return 6 + Math.min(10, scaled * 3);
+        }
+
+        function createMap() {
+            gridSource = new ol.source.Vector();
+            gridLayer = new ol.layer.Vector({
+                source: gridSource,
+                style: (feature) => {
+                    const props = feature.getProperties();
+                    const level = normalizeRiskLabel(props.risk_label);
+                    const color = riskColors[level] || riskColors.default;
+                    const radius = pointRadius(props.pop_exposed);
+                    return new ol.style.Style({
+                        image: new ol.style.Circle({
+                            radius,
+                            fill: new ol.style.Fill({ color }),
+                            stroke: new ol.style.Stroke({ color: "rgba(15,23,42,0.4)", width: 1 }),
+                        }),
+                    });
+                },
             });
-            updateLegend();
-            updateMapSummary(currentFeaturesRaw, select.value, gridSource.getFeatures().length);
-            gridLayer.changed();
-        });
-    });
 
-    riskSlider.addEventListener("input", () => {
-        refreshPoints();
-    });
+            const osmSource = new ol.source.OSM();
+            osmSource.setTileLoadFunction((tile, src) => {
+                tile.getImage().onerror = () => {
+                    console.error("Tile load error:", src);
+                    showMessage("Gagal memuat peta dasar");
+                };
+                tile.getImage().src = src;
+            });
 
-    if (warningInput) {
-        warningInput.value = DEFAULT_WARNING_THRESHOLD.toFixed(2);
-        warningInput.addEventListener("input", () => {
-            updateDecisionSupportNotice();
-        });
-        warningInput.addEventListener("change", () => {
-            updateDecisionSupportNotice();
-        });
-    }
+            const baseLayer = new ol.layer.Tile({ source: osmSource });
+            const view = new ol.View({
+                center: ol.proj.fromLonLat([107.6, -6.8]),
+                zoom: 7,
+                minZoom: 5,
+                maxZoom: 16,
+            });
 
-    select.addEventListener("change", () => {
-        loadGrid();
-    });
+            map = new ol.Map({
+                target: "map",
+                layers: [baseLayer, gridLayer],
+                view,
+            });
 
-    map.on("pointermove", (evt) => {
-        if (evt.dragging) {
-            hideTooltip();
-            return;
+            view.fit(ol.proj.transformExtent(WEST_JAVA_BOUNDS, "EPSG:4326", "EPSG:3857"), {
+                padding: [32, 32, 32, 32],
+                duration: 0,
+            });
+
+            // Force reflow in case container size was 0 during construction
+            setTimeout(() => map.updateSize(), 150);
+            window.addEventListener("resize", () => map.updateSize());
+
+            baseLayer.getSource().on("tileloaderror", (evt) => {
+                console.error("Tile load error", evt);
+                showMessage("Gagal memuat peta dasar");
+            });
+
+            tooltipOverlay = new ol.Overlay({
+                element: tooltipEl,
+                offset: [0, -14],
+                positioning: "bottom-center",
+                autoPan: {
+                    animation: { duration: 200 },
+                    margin: 24,
+                },
+            });
+
+            map.addOverlay(tooltipOverlay);
+
+            map.on("singleclick", (evt) => {
+                const feature = map.forEachFeatureAtPixel(evt.pixel, (feat) => feat);
+                if (feature) {
+                    setSelectedFeature(feature);
+                    showTooltip(feature, evt.coordinate);
+                } else {
+                    hideTooltip();
+                }
+            });
+
+            map.on("movestart", hideTooltip);
+            map.once("rendercomplete", () => {
+                // Ensure markers are drawn after initial view/render
+                refreshPoints();
+            });
         }
-        const feature = map.forEachFeatureAtPixel(evt.pixel, (feat) => feat);
-        setHoverFeature(feature);
-        if (feature) {
-            showTooltip(feature, evt.coordinate);
-            mapViewport.style.cursor = "pointer";
-        } else {
-            hideTooltip();
-            mapViewport.style.cursor = "default";
+
+        function setTooltipPosition(coordinate) {
+            if (!map || !tooltipOverlay) return;
+            const pixel = map.getPixelFromCoordinate(coordinate);
+            const size = map.getSize() || [];
+            let positioning = "bottom-center";
+            let offset = [0, -14];
+            if (pixel && size.length === 2) {
+                const [px, py] = pixel;
+                const [w, h] = size;
+                const vertical = py < 140 ? "top" : "bottom";
+                let horizontal = "center";
+                if (px < 180) horizontal = "right";
+                if (px > w - 180) horizontal = "left";
+                positioning = `${vertical}-${horizontal}`;
+                offset = [0, vertical === "top" ? 14 : -14];
+                if (horizontal === "left") offset[0] = -14;
+                if (horizontal === "right") offset[0] = 14;
+            }
+            tooltipOverlay.setPositioning(positioning);
+            tooltipOverlay.setOffset(offset);
+            tooltipOverlay.setPosition(coordinate);
         }
-    });
 
-    map.on("singleclick", (evt) => {
-        const feature = map.forEachFeatureAtPixel(evt.pixel, (feat) => feat);
-        setSelectedFeature(feature || null);
-    });
+        function showTooltip(feature, coordinate) {
+            const props = feature?.getProperties ? feature.getProperties() : feature || {};
+            const level = normalizeRiskLabel(props.risk_label);
+            tooltipEl.innerHTML = `
+                <div class="tooltip-row"><span class="tooltip-label">Nama wilayah</span><strong>${formatLocationName(props)}</strong></div>
+                <div class="tooltip-row"><span class="tooltip-label">Tingkat risiko</span><strong>${describeRiskLabel(level)}</strong></div>
+                <div class="tooltip-row"><span class="tooltip-label">Perkiraan warga terdampak</span><strong>${formatNumber(props.pop_exposed)}</strong></div>
+                <button type="button" data-grid="${props.grid_id || ""}">Lihat Detail</button>
+            `;
+            tooltipEl.style.display = "block";
+            setTooltipPosition(coordinate);
+            const btn = tooltipEl.querySelector("button");
+            if (btn) {
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    openDetailModal(props);
+                };
+            }
+        }
 
-    mapViewport.addEventListener("mouseleave", hideTooltip);
+        function hideTooltip() {
+            tooltipEl.style.display = "none";
+            tooltipOverlay.setPosition(undefined);
+        }
 
-    updateLegend();
-    loadGrid();
-</script>
+        function setSelectedFeature(feature) {
+            selectedFeature = feature || null;
+            updateDetailPanel(feature);
+        }
 
+        function refreshPoints() {
+            gridSource.clear();
+            if (!allPointProps.length) return;
+            // Only proceed after map is ready to avoid missing renders
+            if (!map || !map.getView().getCenter()) return;
+            const limited = allPointProps.slice(0, MAX_POINTS);
+            limited.forEach((props) => {
+                const feature = new ol.Feature({
+                    geometry: new ol.geom.Point(ol.proj.fromLonLat([props.centroid_lon, props.centroid_lat])),
+                });
+                feature.setProperties(props);
+                gridSource.addFeature(feature);
+            });
+            const topFeature = gridSource.getFeatures()[0];
+            if (topFeature) {
+                setSelectedFeature(topFeature);
+                updateSummaryCard(allPointProps);
+            }
+        }
+
+        async function loadGrid() {
+            showMessage("Memuat data...");
+            try {
+                const res = await fetch(`/api/prediksi/?model=${currentModel}`);
+                if (!res.ok) throw new Error(`Gagal memuat data (${res.status})`);
+                const data = await res.json();
+                console.log("RAW API:", data);
+
+                const parsed = normalizeResponse(data);
+                console.log("PARSED:", parsed);
+                const rawPoints = parsed.points || [];
+
+                if (!rawPoints.length) {
+                    showMessage("Data tidak ditemukan untuk Jawa Barat");
+                    gridSource?.clear();
+                    updateSummaryCard([], parsed.summary);
+                    return;
+                }
+
+                allPointProps = computePointProps(rawPoints);
+                if (!allPointProps.length) {
+                    showMessage("Data diterima, tapi di luar jangkauan peta");
+                    updateSummaryCard([], parsed.summary);
+                    return;
+                }
+
+                updateSummaryCard(allPointProps, parsed.summary);
+                updateMapMeta(parsed.meta, rawPoints);
+                map.setTarget("map");
+                map.updateSize();
+                setTimeout(() => map.updateSize(), 300);
+                refreshPoints();
+                map.updateSize();
+                showMessage("Data siap ditampilkan");
+            } catch (err) {
+                console.error(err);
+                showMessage("Gagal memuat data");
+            }
+        }
+
+        function openModal(modal) {
+            if (!modal) return;
+            modal.classList.add("is-open");
+            document.body.classList.add("modal-open");
+        }
+
+        function closeModal(modal) {
+            if (!modal) return;
+            modal.classList.remove("is-open");
+            if (!document.querySelector(".modal.is-open")) {
+                document.body.classList.remove("modal-open");
+            }
+        }
+
+        function closeAllModals() {
+            [detailModal, guideModal, causeModal].forEach(closeModal);
+        }
+
+        function openDetailModal(props) {
+            const data = props || selectedFeature?.getProperties?.() || selectedFeature;
+            if (!data) return;
+            const level = normalizeRiskLabel(data.risk_label);
+            detailModalTitle.textContent = "Detail wilayah";
+            detailModalLocation.textContent = formatLocationName(data);
+            detailModalRisk.textContent = describeRiskLabel(level);
+            detailModalProbability.textContent = formatPercent(data.probability);
+            detailModalPopulation.textContent = `${formatNumber(data.pop_exposed)} jiwa`;
+            detailModalAftershock.textContent = formatAftershock(data.aftershock_risk);
+            detailModalCause.textContent = data.seismic_cause || "Tektonik regional";
+            detailModalDistance.textContent = buildDistanceLabel(data);
+            detailModalMainshock.textContent = data.mainshock_magnitude ? `M ${data.mainshock_magnitude}` : "-";
+            detailModalYear.textContent = `${data.year ?? "-"} -> ${data.target_year ?? "-"}`;
+            openModal(detailModal);
+        }
+
+        function openCauseModal(causeRaw) {
+            const causeText = buildCauseContent(causeRaw);
+            causeModalText.innerHTML = causeText;
+            openModal(causeModal);
+        }
+
+        function attachModalHandlers() {
+            guideOpenBtn.addEventListener("click", () => openModal(guideModal));
+            causeOpenBtn.addEventListener("click", () => {
+                const cause = causeOpenBtn.dataset.cause || summaryCause.textContent || "Aktivitas Tektonik Regional";
+                openCauseModal(cause);
+            });
+            detailOpenModalBtn.addEventListener("click", () => openDetailModal());
+
+            closeButtons.forEach((btn) => {
+                btn.addEventListener("click", () => closeModal(btn.closest(".modal")));
+            });
+
+            [detailModal, guideModal].forEach((modal) => {
+                modal.addEventListener("click", (evt) => {
+                    if (evt.target.dataset.closeModal !== undefined) {
+                        closeModal(modal);
+                    }
+                });
+            });
+
+            document.addEventListener("keydown", (evt) => {
+                if (evt.key === "Escape") closeAllModals();
+            });
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            createMap();
+            loadGrid();
+            attachModalHandlers();
+        });
+    </script>
 </body>
 </html>
