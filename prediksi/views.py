@@ -19,6 +19,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 PRED_PATH = BASE_DIR / "data" / "processed" / "grid_predictions.csv"
 WEEKLY_PRED_PATH = BASE_DIR / "data" / "processed" / "grid_weekly_predictions.csv"
 GRID_SIZE = 1.0
+BMKG_CLEAN_PATH = BASE_DIR / "data" / "processed" / "bmkg_clean.csv"
 
 WEST_JAVA_LAT_MIN = -7.8
 WEST_JAVA_LAT_MAX = -5.9
@@ -90,6 +91,8 @@ MITIGATION_GUIDANCE = {
 _GRID_LOOKUP_CACHE: dict[str, dict[str, str]] | None = None
 _POP_LOOKUP_CACHE: dict[tuple[str, str], float] | None = None
 _ADMIN_FEATURES_CACHE: list[dict] | None = None
+_MONTHLY_HIST_CACHE: list[float] | None = None
+_BMKG_WEST_CACHE: pd.DataFrame | None = None
 
 
 def _get_mitigation_actions(level: str) -> list[str]:
@@ -527,6 +530,49 @@ def _classify_probability(prob: float) -> str:
     return "Tinggi"
 
 
+def _load_bmkg_west_java() -> pd.DataFrame:
+    global _BMKG_WEST_CACHE
+    if _BMKG_WEST_CACHE is not None:
+        return _BMKG_WEST_CACHE
+    if not BMKG_CLEAN_PATH.exists():
+        _BMKG_WEST_CACHE = pd.DataFrame(columns=["lat", "lon", "date", "month"])
+        return _BMKG_WEST_CACHE
+    try:
+        df = pd.read_csv(BMKG_CLEAN_PATH)
+    except Exception:
+        _BMKG_WEST_CACHE = pd.DataFrame(columns=["lat", "lon", "date", "month"])
+        return _BMKG_WEST_CACHE
+    # ensure date parsing and month extraction
+    date_col = "date" if "date" in df.columns else "datetime" if "datetime" in df.columns else None
+    if date_col:
+        df["date"] = pd.to_datetime(df[date_col], errors="coerce")
+    else:
+        df["date"] = pd.NaT
+    df["month"] = pd.to_datetime(df["date"], errors="coerce").dt.month
+    # Filter West Java bounds (extended per requirement)
+    mask = (
+        pd.to_numeric(df["lat"], errors="coerce").between(-8.5, -5.5)
+        & pd.to_numeric(df["lon"], errors="coerce").between(106.0, 109.0)
+    )
+    df = df.loc[mask, ["lat", "lon", "month"]].dropna(subset=["month"])
+    _BMKG_WEST_CACHE = df
+    return _BMKG_WEST_CACHE
+
+
+def _get_monthly_hist_norm() -> list[float]:
+    global _MONTHLY_HIST_CACHE
+    if _MONTHLY_HIST_CACHE is not None:
+        return _MONTHLY_HIST_CACHE
+    df = _load_bmkg_west_java()
+    if df.empty:
+        _MONTHLY_HIST_CACHE = [1 / 12] * 12
+        return _MONTHLY_HIST_CACHE
+    counts = df["month"].value_counts().reindex(range(1, 13), fill_value=0).tolist()
+    total = sum(counts)
+    _MONTHLY_HIST_CACHE = [c / total for c in counts] if total else [1 / 12] * 12
+    return _MONTHLY_HIST_CACHE
+
+
 @require_GET
 def prediksi_geojson(request):
     model_key = request.GET.get("model", "rf").lower()
@@ -945,27 +991,42 @@ def prediksi_bulanan(request):
     prob_count_by_month = [0 for _ in range(12)]
     peak_month_global = None
     peak_prob_global = -1.0
+    hist_norm = _get_monthly_hist_norm()
 
     target_year_val = int(df["target_year"].dropna().max()) if "target_year" in df else None
-    seasonal_weights = {
-        1: 1.2,
-        2: 1.2,
-        3: 1.2,
-        4: 1.0,
-        5: 1.0,
-        6: 1.0,
-        7: 0.9,
-        8: 0.9,
-        9: 0.9,
-        10: 1.1,
-        11: 1.2,
-        12: 1.2,
-    }
 
     for _, row in df.iterrows():
         grid_id = str(row.get("grid_id"))
         prob_year = _clamp_probability(row.get(probability_field))
-        prob_month = _monthly_probability_from_yearly(prob_year)
+        base_lat = row.get("grid_lat")
+        base_lon = row.get("grid_lon")
+        centroid_lat = float(base_lat) + GRID_SIZE / 2.0 if pd.notna(base_lat) else None
+        centroid_lon = float(base_lon) + GRID_SIZE / 2.0 if pd.notna(base_lon) else None
+
+        # per-grid historical pattern
+        bmkg_df = _load_bmkg_west_java()
+        cell_mask = (
+            pd.to_numeric(bmkg_df["lat"], errors="coerce").between(float(base_lat), float(base_lat) + GRID_SIZE)
+            & pd.to_numeric(bmkg_df["lon"], errors="coerce").between(float(base_lon), float(base_lon) + GRID_SIZE)
+        )
+        cell_df = bmkg_df.loc[cell_mask]
+        if cell_df.empty or cell_df["month"].nunique() <= 1:
+            monthly_base = hist_norm  # fallback province pattern
+        else:
+            counts = cell_df["month"].value_counts().reindex(range(1, 13), fill_value=0).tolist()
+            var = float(np.var(counts))
+            if var <= 0:
+                monthly_base = hist_norm
+            else:
+                total_c = sum(counts)
+                monthly_base = [c / total_c for c in counts] if total_c else hist_norm
+
+        monthly_raw = [n * prob_year for n in monthly_base]
+        total_raw = sum(monthly_raw)
+        scale = 1.0
+        if total_raw > prob_year and total_raw > 0:
+            scale = prob_year / total_raw
+        monthly_probs = [max(0.0, min(1.0, val * scale)) for val in monthly_raw]
 
         prov_norm = kab_norm = prov_label = kab_label = None
         if grid_lookup:
@@ -979,15 +1040,10 @@ def prediksi_bulanan(request):
         if prov_norm and kab_norm:
             pop_val = pop_lookup.get((prov_norm, kab_norm), 0.0)
 
-        base_lat = row.get("grid_lat")
-        base_lon = row.get("grid_lon")
-        centroid_lat = float(base_lat) + GRID_SIZE / 2.0 if pd.notna(base_lat) else None
-        centroid_lon = float(base_lon) + GRID_SIZE / 2.0 if pd.notna(base_lon) else None
         cause_props = _get_cause_properties(centroid_lat, centroid_lon)
 
         for month_idx, month_name in enumerate(MONTH_NAMES, start=1):
-            seasonal = seasonal_weights.get(month_idx, 1.0)
-            prob_month_weighted = max(0.0, min(1.0, prob_month * seasonal))
+            prob_month_weighted = monthly_probs[month_idx - 1]
             exposure = prob_month_weighted * pop_val
             exposure_by_month[month_idx - 1] += exposure
             prob_sum_by_month[month_idx - 1] += prob_month_weighted
@@ -998,6 +1054,7 @@ def prediksi_bulanan(request):
                 "month_number": month_idx,
                 "month_name": month_name,
                 "probability_month": prob_month_weighted,
+                "prob": prob_month_weighted,
                 "probability_year": prob_year,
                 "risk_class": risk_class,
                 "pop_exposed": int(round(pop_val)),
