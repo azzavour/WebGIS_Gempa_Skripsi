@@ -459,6 +459,142 @@
             font-weight: 700;
         }
 
+        .guide-content {
+            display: grid;
+            gap: var(--space-2);
+        }
+
+        .accordion {
+            display: grid;
+            gap: var(--space-2);
+        }
+
+        .accordion__item {
+            border: 1px solid var(--border);
+            border-left: 6px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: linear-gradient(145deg, #fff, #f8fafc);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .accordion__item.guide-section--before { border-left-color: #0ea5e9; }
+        .accordion__item.guide-section--during { border-left-color: #f59e0b; }
+        .accordion__item.guide-section--after { border-left-color: #22c55e; }
+
+        .accordion__header {
+            width: 100%;
+            border: none;
+            background: transparent;
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--space-1);
+            font-weight: 800;
+            font-size: 1.05rem;
+            text-align: left;
+            color: var(--text);
+            cursor: pointer;
+        }
+
+        .accordion__title {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .accordion__pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 26px;
+            height: 26px;
+            border-radius: 8px;
+            background: var(--surface-soft);
+            font-weight: 800;
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+
+        .accordion__chevron {
+            width: 12px;
+            height: 12px;
+            border-right: 2px solid var(--muted);
+            border-bottom: 2px solid var(--muted);
+            transform: rotate(45deg);
+            transition: transform 0.2s ease;
+        }
+
+        .accordion__item.is-active .accordion__chevron {
+            transform: rotate(-135deg);
+        }
+
+        .accordion__panel {
+            padding: 0 16px 14px;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.32s ease, opacity 0.22s ease;
+            opacity: 0;
+        }
+
+        .accordion__item.is-active .accordion__panel {
+            opacity: 1;
+        }
+
+        .guide-list {
+            margin: 0;
+            padding-left: 0;
+            display: grid;
+            gap: 12px;
+        }
+
+        .guide-list > li {
+            font-weight: 700;
+            color: var(--text);
+            list-style: none;
+            display: grid;
+            gap: 6px;
+        }
+
+        .guide-icon {
+            width: 18px;
+            height: 18px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            border-radius: 6px;
+            background: var(--surface-soft);
+            color: #0f172a;
+            font-size: 0.9rem;
+            box-shadow: inset 0 0 0 1px var(--border);
+        }
+
+        .guide-sublist {
+            margin: 0;
+            padding-left: 28px;
+            display: grid;
+            gap: 6px;
+            font-weight: 500;
+            color: var(--muted);
+        }
+
+        .guide-sublist li {
+            list-style: disc;
+        }
+
+        @media (max-width: 640px) {
+            .accordion__header {
+                padding: 12px 14px;
+                font-size: 1rem;
+            }
+
+            .accordion__panel {
+                padding: 0 14px 12px;
+            }
+        }
+
         .map-meta {
             font-size: 0.95rem;
             color: var(--muted);
@@ -602,7 +738,7 @@
                 <h3 id="action-title">Informasi untuk Warga</h3>
                 <ul class="bullet-list" id="meaning-list"></ul>
 
-                <button class="cta-button" type="button" id="guide-open-btn">Panduan Kesiapsiagaan</button>
+                <button class="cta-button" type="button" id="guide-open-btn">Panduan Tindakan Saat Gempa Bumi</button>
 
                 <div class="info-note">
                     <strong>Catatan</strong><br>
@@ -655,15 +791,152 @@
         <div class="modal__backdrop" data-close-modal></div>
         <div class="modal__dialog">
             <button class="modal__close" type="button" aria-label="Tutup panduan" data-close-modal>&times;</button>
-            <h3 id="guide-modal-title">Panduan Kesiapsiagaan</h3>
-            <p class="meta-label">Checklist mitigasi cepat untuk keluarga.</p>
-            <ol class="checklist" id="guide-list">
-                <li><span class="icon-step">1</span><span>Simpan tas darurat: obat, lampu, air, salinan dokumen penting.</span></li>
-                <li><span class="icon-step">2</span><span>Tentukan titik kumpul dan jalur evakuasi di rumah serta kantor.</span></li>
-                <li><span class="icon-step">3</span><span>Amankan perabot tinggi; matikan listrik/gas setelah guncangan berhenti.</span></li>
-                <li><span class="icon-step">4</span><span>Ikuti informasi resmi BMKG/BPBD; hindari hoaks.</span></li>
-                <li><span class="icon-step">5</span><span>Latih keluarga: drop-cover-hold dan kontak darurat.</span></li>
-            </ol>
+            <h3 id="guide-modal-title">Panduan Tindakan Saat Gempa Bumi</h3>
+            <p class="meta-label">Sebelum, saat, dan setelah gempa bumi.</p>
+            <div class="guide-content">
+                <div class="accordion">
+                    <div class="accordion__item guide-section--before">
+                        <button class="accordion__header" type="button" aria-expanded="false">
+                            <span class="accordion__title"><span class="accordion__pill">1</span>Sebelum Gempa</span>
+                            <span class="accordion__chevron" aria-hidden="true"></span>
+                        </button>
+                        <div class="accordion__panel">
+                            <ul class="guide-list">
+                                <li><span><span class="guide-icon" aria-hidden="true"></span>Kunci utama</span>
+                                    <ul class="guide-sublist">
+                                        <li>Pahami apa yang disebut gempa bumi.</li>
+                                        <li>Pastikan struktur dan lokasi rumah aman dari bahaya gempa (longsor, likuefaksi, dll.).</li>
+                                        <li>Evaluasi dan renovasi bangunan agar terhindar dari bahaya gempa bumi.</li>
+                                    </ul>
+                                </li>
+                                <li><span><span class="guide-icon" aria-hidden="true"></span>Kenali lingkungan kerja/tinggal</span>
+                                    <ul class="guide-sublist">
+                                        <li>Ketahui letak pintu, lift, dan tangga darurat serta titik aman untuk berlindung.</li>
+                                        <li>Pelajari P3K.</li>
+                                        <li>Pelajari penggunaan alat pemadam kebakaran.</li>
+                                        <li>Simpan nomor telepon penting yang dapat dihubungi saat gempa.</li>
+                                    </ul>
+                                </li>
+                                <li><span><span class="guide-icon" aria-hidden="true"></span>Persiapan rutin</span>
+                                    <ul class="guide-sublist">
+                                        <li>Kencangkan perabot (lemari, kabinet, dll.) ke dinding agar tidak jatuh, roboh, atau bergeser saat gempa.</li>
+                                        <li>Simpan bahan mudah terbakar di tempat yang tidak mudah pecah.</li>
+                                        <li>Matikan air, gas, dan listrik saat tidak digunakan.</li>
+                                    </ul>
+                                </li>
+                                <li><span><span class="guide-icon" aria-hidden="true"></span>Cegah cedera akibat kejatuhan material</span>
+                                    <ul class="guide-sublist">
+                                        <li>Letakkan benda berat sedapat mungkin di bagian bawah.</li>
+                                        <li>Periksa kestabilan benda gantung yang bisa jatuh saat gempa (misalnya lampu).</li>
+                                    </ul>
+                                </li>
+                                <li><span><span class="guide-icon" aria-hidden="true"></span>Perlengkapan wajib</span>
+                                    <ul class="guide-sublist">
+                                        <li>Kotak P3K.</li>
+                                        <li>Senter/lampu baterai.</li>
+                                        <li>Radio.</li>
+                                        <li>Makanan suplemen dan air.</li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="accordion__item guide-section--during">
+                        <button class="accordion__header" type="button" aria-expanded="false">
+                            <span class="accordion__title"><span class="accordion__pill">2</span>Saat Gempa</span>
+                            <span class="accordion__chevron" aria-hidden="true"></span>
+                        </button>
+                        <div class="accordion__panel">
+                            <ul class="guide-list">
+                                <li><span><span class="guide-icon" aria-hidden="true"></span>Jika di dalam bangunan</span>
+                                    <ul class="guide-sublist">
+                                        <li>Lindungi kepala dan tubuh dari reruntuhan (berlindung di bawah meja, dll.).</li>
+                                        <li>Cari titik paling aman dari guncangan dan reruntuhan.</li>
+                                        <li>Keluar bila masih dapat dilakukan dengan aman.</li>
+                                    </ul>
+                                </li>
+                                <li><span><span class="guide-icon" aria-hidden="true"></span>Jika di luar/area terbuka</span>
+                                    <ul class="guide-sublist">
+                                        <li>Jauhi bangunan, tiang listrik, pohon, dan objek tinggi.</li>
+                                        <li>Perhatikan pijakan; hindari area yang retak.</li>
+                                    </ul>
+                                </li>
+                                <li><span><span class="guide-icon" aria-hidden="true"></span>Jika mengendarai mobil</span>
+                                    <ul class="guide-sublist">
+                                        <li>Berhenti, keluar, dan menjauh dari mobil; hindari risiko pergeseran atau kebakaran.</li>
+                                        <li>Perhatikan pijakan; hindari rekahan tanah.</li>
+                                    </ul>
+                                </li>
+                                <li><span><span class="guide-icon" aria-hidden="true"></span>Jika berada di pantai</span>
+                                    <ul class="guide-sublist">
+                                        <li>Segera jauhi pantai untuk menghindari kemungkinan tsunami.</li>
+                                    </ul>
+                                </li>
+                                <li><span><span class="guide-icon" aria-hidden="true"></span>Jika di daerah pegunungan</span>
+                                    <ul class="guide-sublist">
+                                        <li>Hindari area yang mungkin longsor saat gempa terjadi.</li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="accordion__item guide-section--after">
+                        <button class="accordion__header" type="button" aria-expanded="false">
+                            <span class="accordion__title"><span class="accordion__pill">3</span>Setelah Gempa</span>
+                            <span class="accordion__chevron" aria-hidden="true"></span>
+                        </button>
+                        <div class="accordion__panel">
+                            <ul class="guide-list">
+                                <li><span><span class="guide-icon" aria-hidden="true"></span>Jika di dalam bangunan</span>
+                                    <ul class="guide-sublist">
+                                        <li>Keluar dari bangunan dengan tertib.</li>
+                                        <li>Jangan gunakan tangga berjalan atau lift; gunakan tangga biasa.</li>
+                                        <li>Periksa ada atau tidaknya korban luka dan lakukan P3K.</li>
+                                        <li>Hubungi atau minta pertolongan untuk luka parah.</li>
+                                    </ul>
+                                </li>
+                                <li><span><span class="guide-icon" aria-hidden="true"></span>Periksa lingkungan sekitar</span>
+                                    <ul class="guide-sublist">
+                                        <li>Periksa kemungkinan kebakaran.</li>
+                                        <li>Periksa kebocoran gas.</li>
+                                        <li>Periksa arus pendek listrik.</li>
+                                        <li>Periksa aliran dan pipa air.</li>
+                                        <li>Amankan hal berbahaya (matikan listrik, jangan menyalakan api, dll.).</li>
+                                    </ul>
+                                </li>
+                                <li><span><span class="guide-icon" aria-hidden="true"></span>Jangan memasuki bangunan yang sudah diguncang gempa</span>
+                                    <ul class="guide-sublist">
+                                        <li>Bangunan tersebut rawan keruntuhan.</li>
+                                    </ul>
+                                </li>
+                                <li><span><span class="guide-icon" aria-hidden="true"></span>Jangan berjalan di sekitar daerah gempa</span>
+                                    <ul class="guide-sublist">
+                                        <li>Gempa susulan masih mungkin terjadi.</li>
+                                    </ul>
+                                </li>
+                                <li><span><span class="guide-icon" aria-hidden="true"></span>Dengarkan informasi</span>
+                                    <ul class="guide-sublist">
+                                        <li>Dengarkan informasi gempa bumi dari radio (terutama jika ada gempa susulan).</li>
+                                        <li>Jangan mudah terpancing isu atau berita tanpa sumber jelas.</li>
+                                    </ul>
+                                </li>
+                                <li><span><span class="guide-icon" aria-hidden="true"></span>Mengisi angket instansi terkait</span>
+                                    <ul class="guide-sublist">
+                                        <li>Isi angket untuk membantu pendataan tingkat kerusakan di lokasi gempa.</li>
+                                    </ul>
+                                </li>
+                                <li><span><span class="guide-icon" aria-hidden="true"></span>Tetap tenang dan berdoa</span>
+                                    <ul class="guide-sublist">
+                                        <li>Berdoa kepada Tuhan Yang Maha Esa demi keamanan dan keselamatan bersama.</li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <button class="cta-button" type="button" data-close-modal>Tutup</button>
         </div>
     </div>
@@ -737,6 +1010,7 @@
         const causeOpenBtn = document.getElementById("cause-open-btn");
         const causeModalText = document.getElementById("cause-modal-text");
         const closeButtons = document.querySelectorAll("[data-close-modal]");
+        const accordionItems = document.querySelectorAll(".accordion__item");
 
         let map;
         let gridSource;
@@ -768,6 +1042,36 @@
 
         function formatAftershock(value) {
             return String(value || "-").replace(/High/i, "Tinggi").replace(/Medium/i, "Sedang").replace(/Low/i, "Rendah");
+        }
+
+        function setAccordionState(item, expand) {
+            const header = item?.querySelector(".accordion__header");
+            const panel = item?.querySelector(".accordion__panel");
+            if (!header || !panel) return;
+            header.setAttribute("aria-expanded", expand);
+            item.classList.toggle("is-active", expand);
+            panel.style.maxHeight = expand ? `${panel.scrollHeight}px` : "0px";
+        }
+
+        function refreshAccordionPanels() {
+            accordionItems.forEach((item) => {
+                if (!item.classList.contains("is-active")) return;
+                const panel = item.querySelector(".accordion__panel");
+                if (panel) panel.style.maxHeight = `${panel.scrollHeight}px`;
+            });
+        }
+
+        function initAccordion() {
+            accordionItems.forEach((item) => setAccordionState(item, false));
+            accordionItems.forEach((item) => {
+                const header = item.querySelector(".accordion__header");
+                if (!header) return;
+                header.addEventListener("click", () => {
+                    const expanded = header.getAttribute("aria-expanded") === "true";
+                    setAccordionState(item, !expanded);
+                });
+            });
+            window.addEventListener("resize", refreshAccordionPanels);
         }
 
         function formatLocationName(props) {
@@ -1277,7 +1581,9 @@
         }
 
         function attachModalHandlers() {
-            guideOpenBtn.addEventListener("click", () => openModal(guideModal));
+            guideOpenBtn.addEventListener("click", () => {
+                openModal(guideModal);
+            });
             causeOpenBtn.addEventListener("click", () => {
                 const cause = causeOpenBtn.dataset.cause || summaryCause.textContent || "Aktivitas Tektonik Regional";
                 openCauseModal(cause);
@@ -1304,6 +1610,7 @@
         document.addEventListener("DOMContentLoaded", () => {
             createMap();
             loadGrid();
+            initAccordion();
             attachModalHandlers();
         });
     </script>
