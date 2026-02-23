@@ -6,6 +6,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 RAW_PATH = BASE_DIR / "data" / "processed" / "bmkg_all_raw.csv"
 OUT_PATH = BASE_DIR / "data" / "processed" / "bmkg_clean.csv"
 
+# Bounding box Provinsi Jawa Barat
+BBOX = {
+    "lat_min": -8.0,
+    "lat_max": -5.0,
+    "lon_min": 106.0,
+    "lon_max": 109.0,
+}
+
 # nama kolom yang kita inginkan di output
 COLUMN_MAP = {
     "DATE (GMT)": "datetime",
@@ -64,7 +72,14 @@ def main():
     # FILTER magnitudo minimal (boleh ganti 4.5 sesuai rancanganmu)
     df = df[df["mag"] >= 4.5].reset_index(drop=True)
 
-    print("Jumlah baris setelah dibersihkan:", len(df))
+    # FILTER hanya kejadian dalam bounding box Jawa Barat
+    bbox_mask = (
+        df["lat"].between(BBOX["lat_min"], BBOX["lat_max"], inclusive="both")
+        & df["lon"].between(BBOX["lon_min"], BBOX["lon_max"], inclusive="both")
+    )
+    df = df[bbox_mask].reset_index(drop=True)
+
+    print("Jumlah baris setelah dibersihkan & filter Jawa Barat:", len(df))
 
     # SIMPAN
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)

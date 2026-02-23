@@ -5,11 +5,11 @@ import matplotlib.pyplot as plt
 
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
-from sklearn.linear_model import PoissonRegressor
 from sklearn.metrics import (
     accuracy_score,
-    brier_score_loss,
-    log_loss,
+    precision_score,
+    recall_score,
+    f1_score,
     roc_auc_score,
     roc_curve,
 )
@@ -107,21 +107,27 @@ def evaluate_model(name, y_true, proba):
     y_pred = (proba >= 0.5).astype(int)
 
     acc = accuracy_score(y_true, y_pred)
-    brier = brier_score_loss(y_true, proba)
-    ll = log_loss(y_true, proba)
-    auc = roc_auc_score(y_true, proba)
+    prec = precision_score(y_true, y_pred, zero_division=0)
+    rec = recall_score(y_true, y_pred, zero_division=0)
+    f1 = f1_score(y_true, y_pred, zero_division=0)
+    try:
+        auc = roc_auc_score(y_true, proba)
+    except ValueError:
+        auc = float("nan")
 
     print(f"\n=== {name} ===")
     print(f"Akurasi      : {acc:.4f}")
-    print(f"Brier Score  : {brier:.4f}")
-    print(f"Log Loss     : {ll:.4f}")
+    print(f"Precision    : {prec:.4f}")
+    print(f"Recall       : {rec:.4f}")
+    print(f"F1-score     : {f1:.4f}")
     print(f"ROC AUC      : {auc:.4f}")
 
     return {
         "model": name,
         "accuracy": acc,
-        "brier_score": brier,
-        "log_loss": ll,
+        "precision": prec,
+        "recall": rec,
+        "f1": f1,
         "roc_auc": auc,
     }
 
@@ -137,6 +143,7 @@ rf = RandomForestClassifier(
     max_depth=None,
     random_state=42,
     n_jobs=-1,
+    class_weight="balanced",
 )
 rf.fit(X_train, y_train)
 
@@ -171,7 +178,7 @@ print(f">> Feature importance RF disimpan ke: {fi_png}")
 # 2. Support Vector Machine (SVM RBF)
 # =========================
 print("\n>> Melatih SVM (RBF) ...")
-svm = SVC(kernel="rbf", probability=True, random_state=42)
+svm = SVC(kernel="rbf", probability=True, random_state=42, class_weight="balanced")
 svm.fit(X_train, y_train)
 
 proba_svm = svm.predict_proba(X_test)[:, 1]
@@ -182,34 +189,15 @@ fpr_svm, tpr_svm, _ = roc_curve(y_test, proba_svm)
 roc_data["SVM (RBF)"] = (fpr_svm, tpr_svm)
 
 # =========================
-# 3. Poisson Regressor (baseline)
-# =========================
-print("\n>> Melatih Poisson Regressor (baseline) ...")
-
-# Poisson memodelkan laju kejadian λ; probabilitas >=1 event: p = 1 - exp(-λ)
-poisson = PoissonRegressor(alpha=0.0, max_iter=1000)
-poisson.fit(X_train, y_train)
-
-lambda_pred = poisson.predict(X_test)
-lambda_pred = np.clip(lambda_pred, 1e-6, 50)  # jaga numerik
-
-proba_pois = 1 - np.exp(-lambda_pred)
-scores_pois = evaluate_model("Poisson Regressor", y_test, proba_pois)
-model_scores.append(scores_pois)
-
-fpr_pois, tpr_pois, _ = roc_curve(y_test, proba_pois)
-roc_data["Poisson Regressor"] = (fpr_pois, tpr_pois)
-
-# =========================
 # Simpan skor model ke CSV
 # =========================
 scores_df = pd.DataFrame(model_scores)
-scores_csv_path = os.path.join(OUTPUT_DIR, "model_scores_bab4.csv")
+scores_csv_path = os.path.join(DATA_PROCESSED, "model_scores.csv")
 scores_df.to_csv(scores_csv_path, index=False)
 print(f"\n>> Tabel skor model disimpan ke: {scores_csv_path}")
 
 # =========================
-# Plot ROC curve 3 model
+# Plot ROC curve 2 model
 # =========================
 plt.figure()
 for name, (fpr, tpr) in roc_data.items():

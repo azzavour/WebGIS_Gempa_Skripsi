@@ -36,24 +36,16 @@ def main():
     print("Load model dari:", MODELS_DIR)
     rf_model = joblib.load(MODELS_DIR / "rf_model.pkl")
     svm_model = joblib.load(MODELS_DIR / "svm_model.pkl")
-    poisson_model = joblib.load(MODELS_DIR / "poisson_model.pkl")
 
     # prediksi probabilitas gempa (tahun berikutnya)
     rf_prob = rf_model.predict_proba(X)[:, 1]
     svm_prob = svm_model.predict_proba(X)[:, 1]
-
-    # Poisson → prediksi lambda (rata-rata jumlah kejadian)
-    lam = poisson_model.predict(X)
-    # Probabilitas minimal 0, batasi juga supaya tidak minus kalau ada error numerik
-    lam = np.clip(lam, a_min=0, a_max=None)
-    poisson_prob = 1 - np.exp(-lam)  # P(X>=1) = 1 - e^(-λ)
 
     # buat dataframe output
     df_out = df[["grid_id", "grid_lat", "grid_lon", "year"]].copy()
     df_out["target_year"] = df_out["year"] + 1  # tahun yang diprediksi
     df_out["rf_prob"] = rf_prob
     df_out["svm_prob"] = svm_prob
-    df_out["poisson_prob"] = poisson_prob
 
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     df_out.to_csv(OUT_PATH, index=False)

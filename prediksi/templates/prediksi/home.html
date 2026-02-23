@@ -1015,6 +1015,8 @@
         let gridSource;
         let gridLayer;
         let tooltipOverlay;
+        let faultOverlay;
+        let faultTooltipEl;
         let selectedFeature = null;
         let currentFeaturesRaw = [];
         let allPointProps = [];
@@ -1331,6 +1333,31 @@
                 },
             });
 
+            const faultLines = [
+                { name: "Sesar Cimandiri", coords: [[106.7, -7.1], [107.5, -6.9]] },
+                { name: "Sesar Lembang", coords: [[107.5, -6.9], [107.7, -6.8]] },
+                { name: "Sesar Baribis", coords: [[106.8, -6.6], [108.3, -6.7]] },
+            ];
+
+            const faultFeatures = faultLines.map((line) => {
+                const pts = line.coords.map(([lon, lat]) => ol.proj.fromLonLat([lon, lat]));
+                const feature = new ol.Feature({
+                    geometry: new ol.geom.LineString(pts),
+                    fault_name: line.name,
+                });
+                return feature;
+            });
+
+            const faultLayer = new ol.layer.Vector({
+                source: new ol.source.Vector({ features: faultFeatures }),
+                style: new ol.style.Style({
+                    stroke: new ol.style.Stroke({
+                        color: "red",
+                        width: 3,
+                    }),
+                }),
+            });
+
             const osmSource = new ol.source.OSM();
             osmSource.setTileLoadFunction((tile, src) => {
                 tile.getImage().onerror = () => {
@@ -1342,15 +1369,15 @@
 
             const baseLayer = new ol.layer.Tile({ source: osmSource });
             const view = new ol.View({
-                center: ol.proj.fromLonLat([107.6, -6.8]),
-                zoom: 7,
+                center: ol.proj.fromLonLat([107.6046, -6.9204]),
+                zoom: 8,
                 minZoom: 5,
                 maxZoom: 16,
             });
 
             map = new ol.Map({
                 target: "map",
-                layers: [baseLayer, gridLayer],
+                layers: [baseLayer, faultLayer, gridLayer],
                 view,
             });
 
@@ -1380,8 +1407,23 @@
 
             map.addOverlay(tooltipOverlay);
 
+            faultTooltipEl = document.createElement("div");
+            faultTooltipEl.className = "map-tooltip";
+            faultOverlay = new ol.Overlay({
+                element: faultTooltipEl,
+                offset: [0, -10],
+                positioning: "bottom-center",
+            });
+            map.addOverlay(faultOverlay);
+
             map.on("singleclick", (evt) => {
                 const feature = map.forEachFeatureAtPixel(evt.pixel, (feat) => feat);
+                if (feature && feature.get && feature.get("fault_name")) {
+                    hideTooltip();
+                    showFaultPopup(feature, evt.coordinate);
+                    return;
+                }
+                hideFaultPopup();
                 if (feature) {
                     setSelectedFeature(feature);
                     showTooltip(feature, evt.coordinate);
@@ -1390,7 +1432,10 @@
                 }
             });
 
-            map.on("movestart", hideTooltip);
+            map.on("movestart", () => {
+                hideTooltip();
+                hideFaultPopup();
+            });
             map.once("rendercomplete", () => {
                 // Ensure markers are drawn after initial view/render
                 refreshPoints();
@@ -1443,6 +1488,22 @@
         function hideTooltip() {
             tooltipEl.style.display = "none";
             tooltipOverlay.setPosition(undefined);
+        }
+
+        function showFaultPopup(feature, coordinate) {
+            if (!faultOverlay || !faultTooltipEl) return;
+            const name = feature?.get ? feature.get("fault_name") : feature?.fault_name || "Sesar Aktif";
+            faultTooltipEl.innerHTML = `
+                <div class="tooltip-row"><span class="tooltip-label">Sesar Aktif</span><strong>${name}</strong></div>
+            `;
+            faultOverlay.setPosition(coordinate);
+            faultTooltipEl.style.display = "block";
+        }
+
+        function hideFaultPopup() {
+            if (!faultOverlay || !faultTooltipEl) return;
+            faultTooltipEl.style.display = "none";
+            faultOverlay.setPosition(undefined);
         }
 
         function setSelectedFeature(feature) {

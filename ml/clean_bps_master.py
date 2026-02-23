@@ -9,6 +9,10 @@ def clean_bps_master(
     # Baca file master
     df = pd.read_excel(input_path)
 
+    # Isi tahun yang kosong dengan tahun studi (2023)
+    if "tahun" in df.columns:
+        df["tahun"] = df["tahun"].fillna(2023).astype(int)
+
     # Tentukan nama kolom kecamatan (sesuai script sebelumnya harusnya 'kecamatan')
     if "kecamatan" in df.columns:
         name_col = "kecamatan"

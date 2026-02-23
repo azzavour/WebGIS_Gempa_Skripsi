@@ -42,7 +42,6 @@ BPS_MASTER_PATH = BASE_DIR / "data" / "processed" / "bps_kecamatan_master_clean.
 MODEL_FIELDS = {
     "rf": "rf_prob",
     "svm": "svm_prob",
-    "poisson": "poisson_prob",
 }
 
 MONTH_NAMES = [
@@ -567,7 +566,6 @@ def prediksi_geojson(request):
         "target_year",
         "rf_prob",
         "svm_prob",
-        "poisson_prob",
     ]
     missing = [col for col in required_cols if col not in df.columns]
     if missing:
@@ -645,7 +643,6 @@ def prediksi_geojson(request):
             "risk_label": risk_label,
             "rf_prob": _clamp_probability(row["rf_prob"]),
             "svm_prob": _clamp_probability(row["svm_prob"]),
-            "poisson_prob": _clamp_probability(row["poisson_prob"]),
             "probability_field": MODEL_FIELDS[model_key],
             "mitigation_recommendations": mitigation,
             "decision_support_note": DECISION_SUPPORT_NOTE,
@@ -699,7 +696,6 @@ def prediksi_points(request):
         "target_year",
         "rf_prob",
         "svm_prob",
-        "poisson_prob",
     ]
     missing = [col for col in required_cols if col not in df.columns]
     if missing:
@@ -749,7 +745,6 @@ def prediksi_points(request):
             "target_year": int(row["target_year"]),
             "rf_prob": float(row["rf_prob"]),
             "svm_prob": float(row["svm_prob"]),
-            "poisson_prob": float(row["poisson_prob"]),
             "probability": probability,
             "pop_exposed": int(round(pop_value)),
             "exposure": exposure,
@@ -1025,24 +1020,16 @@ def main():
     print("Load model dari:", MODELS_DIR)
     rf_model = joblib.load(MODELS_DIR / "rf_model.pkl")
     svm_model = joblib.load(MODELS_DIR / "svm_model.pkl")
-    poisson_model = joblib.load(MODELS_DIR / "poisson_model.pkl")
 
     # prediksi probabilitas gempa (tahun berikutnya)
     rf_prob = rf_model.predict_proba(X)[:, 1]
     svm_prob = svm_model.predict_proba(X)[:, 1]
-
-    # Poisson model prediksi lambda (rata-rata jumlah kejadian)
-    lam = poisson_model.predict(X)
-    # Probabilitas minimal 0, batasi juga supaya tidak minus kalau ada error numerik
-    lam = np.clip(lam, a_min=0, a_max=None)
-    poisson_prob = 1 - np.exp(-lam)  # P(X>=1) = 1 - exp(-lambda)
 
     # buat dataframe output
     df_out = df[["grid_id", "grid_lat", "grid_lon", "year"]].copy()
     df_out["target_year"] = df_out["year"] + 1  # tahun yang diprediksi
     df_out["rf_prob"] = rf_prob
     df_out["svm_prob"] = svm_prob
-    df_out["poisson_prob"] = poisson_prob
 
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     df_out.to_csv(OUT_PATH, index=False)
